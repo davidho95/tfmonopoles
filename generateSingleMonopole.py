@@ -40,14 +40,15 @@ energy = lossFn()
 print("Initial energy: " + str(energy.numpy()))
 
 # Stopping criteria on the maximum value of the gradient
-tol = 1e-5
+tol = 1e-4
 
 # Setup optimiser
 opt = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.3)
 numSteps = 0
-maxGrad = 1e6
+maxGrad = 1e6 # Initial value; a big number
+maxNumSteps = 10000
 
-while maxGrad > tol and numSteps < 10000:
+while maxGrad > tol and numSteps < maxNumSteps:
 	# Compute the field energy, with tf watching the variables
 	with tf.GradientTape() as tape:
 		energy = lossFn()

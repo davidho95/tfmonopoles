@@ -62,13 +62,13 @@ def setMonopoleInitialConditions(X, Y, Z, vev):
     latSize = tf.shape(X)
     r = tf.math.sqrt(X**2 + Y**2 + Z**2)
 
-    higgsX = tf.cast(vev, tf.complex128) / np.sqrt(2) * X / r
-    higgsY = tf.cast(vev, tf.complex128) / np.sqrt(2) * Y / r
-    higgsZ = tf.cast(vev, tf.complex128) / np.sqrt(2) * Z / r
+    higgsX = vev / np.sqrt(2) * X / r
+    higgsY = vev / np.sqrt(2) * Y / r
+    higgsZ = vev / np.sqrt(2) * Z / r
 
     scalarMat = vecToSu2LieAlg(tf.stack([higgsX, higgsY, higgsZ], -1))
 
-    zeroMat = tf.zeros(latSize, dtype=tf.complex128)
+    zeroMat = tf.zeros(latSize, dtype=tf.float64)
     gaugeVec0 = tf.stack([zeroMat, Z / r**2, -Y / r**2], -1)
     gaugeVec1 = tf.stack([-Z / r**2, zeroMat, X / r**2], -1)
     gaugeVec2 = tf.stack([Y / r**2, -X / r**2, zeroMat], -1)

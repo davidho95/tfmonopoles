@@ -1,167 +1,184 @@
 '''
-Collection of functions to compute field properties in Georgi-Glashow Su(2) Theory
+Class for calculating field properties in Georgi-Glashow Su(2) Theory
 '''
 
 import tensorflow as tf
 import numpy as np
 import FieldTools
 
-def getEnergy(scalarField, gaugeField, vev, selfCoupling, gaugeCoupling):
-    return tf.math.reduce_sum(getEnergyDensity(scalarField, gaugeField, vev, \
-        selfCoupling, gaugeCoupling))
+class GeorgiGlashowSu2Theory:
+    # Params is a dictionary with keys "vev", "selfCoupling" and "gaugeCoupling"
+    def __init__(self, params):
+        self.gaugeCoupling = params["gaugeCoupling"]
+        self.vev = params["vev"]
+        self.selfCoupling = params["selfCoupling"]
 
-def getEnergyDensity(scalarField, gaugeField, vev, selfCoupling, gaugeCoupling):
-    energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
+    def energy(self, scalarField, gaugeField):
+        return tf.math.reduce_sum(self.energyDensity(scalarField, gaugeField))
 
-    energyDensity += getYMTerm(gaugeField, gaugeCoupling)
-    energyDensity += getCovDerivTerm(scalarField, gaugeField)
-    energyDensity += getScalarPotential(scalarField, vev, selfCoupling)
+    def energyDensity(self, scalarField, gaugeField):
+        energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
 
-    return energyDensity
+        energyDensity += self.ymTerm(gaugeField)
+        energyDensity += self.covDerivTerm(scalarField, gaugeField)
+        energyDensity += self.scalarPotential(scalarField)
 
-# Wilson action
-def getYMTerm(gaugeField, gaugeCoupling):
-    energyDensity = tf.zeros(tf.shape(gaugeField)[0:3], dtype=tf.float64)
+        return energyDensity
 
-    numDims = 3
-    for ii in range(numDims):
-        for jj in range(numDims):
-            if ii >= jj: continue
-            energyDensity += 2/gaugeCoupling**2 * tf.math.real((2 - \
-                tf.linalg.trace(getPlaquette(gaugeField, ii, jj))))
+    # Wilson action
+    def ymTerm(self, gaugeField):
+        energyDensity = tf.zeros(tf.shape(gaugeField)[0:3], dtype=tf.float64)
 
-    return energyDensity
+        numDims = 3
+        for ii in range(numDims):
+            for jj in range(numDims):
+                if ii >= jj: continue
+                energyDensity += 2/self.gaugeCoupling**2 * tf.math.real((2 - \
+                    tf.linalg.trace(self.plaquette(gaugeField, ii, jj))))
 
-# Gauge kinetic term for the scalar field
-def getCovDerivTerm(scalarField, gaugeField):
-    energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
-    numDims = 3
-    for ii in range(numDims):
-        covDeriv = getCovDeriv(scalarField, gaugeField, ii)
-        energyDensity += tf.math.real(tf.linalg.trace(covDeriv @ covDeriv))
-    return energyDensity
+        return energyDensity
 
-# Scalar potential
-def getScalarPotential(scalarField, vev, selfCoupling):
-    energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
+    # Gauge kinetic term for the scalar field
+    def covDerivTerm(self, scalarField, gaugeField):
+        energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
+        numDims = 3
+        for ii in range(numDims):
+            covDeriv = self.covDeriv(scalarField, gaugeField, ii)
+            energyDensity += tf.math.real(tf.linalg.trace(covDeriv @ covDeriv))
+        return energyDensity
 
-    norms = tf.math.real(tf.linalg.trace(scalarField @ scalarField))
-    energyDensity += selfCoupling * (vev**2 - norms)**2
-    return energyDensity
+    # Scalar potential
+    def scalarPotential(self, scalarField):
+        energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
 
-# Wilson plaquette on the lattice
-def getPlaquette(gaugeField, dir1, dir2):
-    plaquette = gaugeField[:,:,:,dir1,:,:]
-    plaquette = plaquette @ shiftGaugeField(gaugeField, dir1)[:,:,:,dir2,:,:]
-    plaquette = plaquette @ tf.linalg.adjoint(
-        shiftGaugeField(gaugeField,dir2)[:,:,:,dir1,:,:]
-        )
-    plaquette = plaquette @ tf.linalg.adjoint(gaugeField[:,:,:,dir2,:,:])
+        norms = tf.math.real(tf.linalg.trace(scalarField @ scalarField))
+        energyDensity += self.selfCoupling * (self.vev**2 - norms)**2
+        return energyDensity
 
-    return plaquette
+    # Wilson plaquette on the lattice
+    def plaquette(self, gaugeField, dir1, dir2):
+        plaquette = gaugeField[:,:,:,dir1,:,:]
+        plaquette = plaquette @\
+            self.shiftGaugeField(gaugeField, dir1)[:,:,:,dir2,:,:]
+        plaquette = plaquette @ \
+            tf.linalg.adjoint(
+                self.shiftGaugeField(gaugeField,dir2)[:,:,:,dir1,:,:]
+                )
+        plaquette = plaquette @ tf.linalg.adjoint(gaugeField[:,:,:,dir2,:,:])
 
-# Gauge covariant derivative
-def getCovDeriv(scalarField, gaugeField, dir):
-    scalarFieldShifted = shiftScalarField(scalarField, dir)
-    covDeriv = gaugeField[:,:,:,dir,:,:] @ scalarFieldShifted @\
-        tf.linalg.adjoint(gaugeField[:,:,:,dir,:,:]) - scalarField
-    return covDeriv
+        return plaquette
 
-# Projects out abelian subgroup of gauge field
-def getU1Projector(scalarField):
-    trScalarSq = tf.linalg.trace(scalarField @ scalarField)
-    latSize = tf.shape(trScalarSq)
+    # Gauge covariant derivative
+    def covDeriv(self, scalarField, gaugeField, dir):
+        scalarFieldShifted = self.shiftScalarField(scalarField, dir)
+        covDeriv = gaugeField[:,:,:,dir,:,:] @ scalarFieldShifted @\
+            tf.linalg.adjoint(gaugeField[:,:,:,dir,:,:]) - scalarField
+        return covDeriv
 
-    trScalarSq = tf.expand_dims(trScalarSq, -1)
-    trScalarSq = tf.expand_dims(trScalarSq, -1)
+    # Projects out abelian subgroup of gauge field
+    def u1Projector(self, scalarField):
+        trScalarSq = tf.linalg.trace(scalarField @ scalarField)
+        latSize = tf.shape(trScalarSq)
 
-    normalisedScalarField = tf.math.sqrt(2.0/trScalarSq) * scalarField
+        trScalarSq = tf.expand_dims(trScalarSq, -1)
+        trScalarSq = tf.expand_dims(trScalarSq, -1)
 
-    identity = tf.eye(2, batch_shape=latSize, dtype=tf.complex128) 
+        normalisedScalarField = tf.math.sqrt(2.0/trScalarSq) * scalarField
 
-    u1Projector = 0.5*(identity + normalisedScalarField)
+        identity = tf.eye(2, batch_shape=latSize, dtype=tf.complex128) 
 
-    return u1Projector
+        u1Projector = 0.5*(identity + normalisedScalarField)
 
-# Projects out abelian subgroup of gauge field
-def getU1Link(gaugeField, scalarField, dir):
-    projector = getU1Projector(scalarField)
-    projectorShifted = getU1Projector(shiftScalarField(scalarField, dir))
+        return u1Projector
 
-    u1Link = projector @ gaugeField[:,:,:,dir,:,:] @ projectorShifted
+    # Projects out abelian subgroup of gauge field
+    def getU1Link(self, gaugeField, scalarField, dir):
+        projector = self.u1Projector(scalarField)
+        projectorShifted = self.u1Projector(self.shiftScalarField(scalarField,\
+            dir))
 
-    return u1Link
+        u1Link = projector @ gaugeField[:,:,:,dir,:,:] @ projectorShifted
 
-# Plaquette formed from abelian links
-def getU1Plaquette(gaugeField, scalarField, dir1, dir2):
-    u1Plaquette = getU1Link(gaugeField, scalarField, dir1)
-    u1Plaquette = u1Plaquette @ getU1Link(shiftGaugeField(gaugeField, dir1),\
-    	shiftScalarField(scalarField, dir1), dir2)
-    u1Plaquette = u1Plaquette @ tf.linalg.adjoint(
-    	getU1Link(
-    		shiftGaugeField(gaugeField, dir2),\
-    			shiftScalarField(scalarField, dir2), dir1
-    		)
-    	)
-    u1Plaquette = u1Plaquette @ tf.linalg.adjoint(getU1Link(gaugeField,\
-    	scalarField, dir2))
+        return u1Link
 
-    return u1Plaquette
+    # Plaquette formed from abelian links
+    def u1Plaquette(self, gaugeField, scalarField, dir1, dir2):
+        u1Plaquette = self.getU1Link(gaugeField, scalarField, dir1)
+        u1Plaquette = u1Plaquette @ self.getU1Link(
+            self.shiftGaugeField(gaugeField, dir1), \
+                self.shiftScalarField(scalarField, dir1), dir2
+            )
+        u1Plaquette = u1Plaquette @ tf.linalg.adjoint(
+            self.getU1Link(
+                self.shiftGaugeField(gaugeField, dir2),\
+                    self.shiftScalarField(scalarField, dir2), dir1
+                )
+            )
+        u1Plaquette = u1Plaquette @ tf.linalg.adjoint(
+            self.getU1Link(gaugeField, scalarField, dir2)
+            )
 
-def getMagneticField(gaugeField, scalarField, gaugeCoupling, dir):
-    dir1 = (dir + 1) % 3
-    dir2 = (dir + 2) % 3
+        return u1Plaquette
 
-    magneticField = 2.0/gaugeCoupling * tf.math.angle(
-    	tf.linalg.trace(getU1Plaquette(gaugeField, scalarField, dir1, dir2))
-    	)
+    def magneticField(self, gaugeField, scalarField, dir):
+        dir1 = (dir + 1) % 3
+        dir2 = (dir + 2) % 3
 
-    return magneticField
+        magneticField = 2.0/self.gaugeCoupling * tf.math.angle(
+            tf.linalg.trace(
+                self.u1Plaquette(gaugeField, scalarField, dir1, dir2))
+            )
 
-# Shifts scalar field using twisted BC's
-def shiftScalarField(scalarField, dir):
-    shiftedField = tf.roll(scalarField, -1, dir)
+        return magneticField
 
-    # Create a mask to pre- and post-multiply the field, with nonidentity values
-    # at the boundary 
-    identityBatchShape = list(np.shape(scalarField)[0:3])
-    identityBatchShape[dir] -= 1
+    # Shifts scalar field using twisted BC's
+    def shiftScalarField(self, scalarField, dir):
+        shiftedField = tf.roll(scalarField, -1, dir)
 
-    complementaryBatchShape = list(np.shape(scalarField)[0:3])
-    complementaryBatchShape[dir] = 1
+        # Create a mask to pre- and post-multiply the field, with nonidentity
+        # values at the boundary 
+        identityBatchShape = list(np.shape(scalarField)[0:3])
+        identityBatchShape[dir] -= 1
 
-    identities = tf.eye(2, batch_shape=identityBatchShape, dtype=tf.complex128)
-    pauliMatrices = 1j*tf.eye(2, batch_shape=complementaryBatchShape,\
-    	dtype=tf.complex128) @ FieldTools.pauliMatrix(dir)
+        complementaryBatchShape = list(np.shape(scalarField)[0:3])
+        complementaryBatchShape[dir] = 1
 
-    # Concatenating identities with pauli matrices gives a tensor the same size
-    # as the input
-    boundaryMask = tf.concat([identities, pauliMatrices], dir)
+        identities = tf.eye(
+            2, batch_shape=identityBatchShape, dtype=tf.complex128
+            )
+        pauliMatrices = 1j*tf.eye(2, batch_shape=complementaryBatchShape,\
+            dtype=tf.complex128) @ FieldTools.pauliMatrix(dir)
 
-    shiftedField = boundaryMask @ shiftedField @ boundaryMask
+        # Concatenating identities with pauli matrices gives a tensor the same
+        # size as the input
+        boundaryMask = tf.concat([identities, pauliMatrices], dir)
 
-    return shiftedField
+        shiftedField = boundaryMask @ shiftedField @ boundaryMask
 
-# Shifts gauge field using twisted BC's
-def shiftGaugeField(gaugeField, dir):
-    shiftedField = tf.roll(gaugeField, -1, dir)
+        return shiftedField
 
-    # Create a mask to pre- and post-multiply the field, with nonidentity values
-    # at the boundary 
-    identityBatchShape = list(np.shape(gaugeField)[0:4])
-    identityBatchShape[dir] -= 1
+    # Shifts gauge field using twisted BC's
+    def shiftGaugeField(self, gaugeField, dir):
+        shiftedField = tf.roll(gaugeField, -1, dir)
 
-    complementaryBatchShape = list(np.shape(gaugeField)[0:4])
-    complementaryBatchShape[dir] = 1
+        # Create a mask to pre- and post-multiply the field, with nonidentity
+        # values at the boundary 
+        identityBatchShape = list(np.shape(gaugeField)[0:4])
+        identityBatchShape[dir] -= 1
 
-    identities = tf.eye(2, batch_shape=identityBatchShape, dtype=tf.complex128)
-    pauliMatrices = tf.eye(2, batch_shape=complementaryBatchShape,\
-    	dtype=tf.complex128) @ FieldTools.pauliMatrix(dir)
+        complementaryBatchShape = list(np.shape(gaugeField)[0:4])
+        complementaryBatchShape[dir] = 1
 
-    # Concatenating identities with pauli matrices gives a tensor the same size
-    # as the input
-    boundaryMask = tf.concat([identities, pauliMatrices], dir)
+        identities = tf.eye(
+            2, batch_shape=identityBatchShape, dtype=tf.complex128
+            )
+        pauliMatrices = tf.eye(2, batch_shape=complementaryBatchShape,\
+            dtype=tf.complex128) @ FieldTools.pauliMatrix(dir)
 
-    shiftedField = boundaryMask @ shiftedField @ boundaryMask
+        # Concatenating identities with pauli matrices gives a tensor the same
+        # size as the input
+        boundaryMask = tf.concat([identities, pauliMatrices], dir)
 
-    return shiftedField
+        shiftedField = boundaryMask @ shiftedField @ boundaryMask
+
+        return shiftedField

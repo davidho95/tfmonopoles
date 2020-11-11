@@ -1,6 +1,6 @@
-'''
+"""
 Generates a single magnetic monopole of charge +-1.
-'''
+"""
 
 import tensorflow as tf
 import numpy as np
@@ -13,11 +13,11 @@ import FieldTools
 N = 16
 
 # Set up the lattice
-x = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), dtype=tf.complex128)
-y = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), dtype=tf.complex128)
-z = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), dtype=tf.complex128)
+x = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
+y = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
+z = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
 
-X,Y,Z = tf.meshgrid(x,y,z, indexing='ij')
+X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 
 # Theory parameters
 vev = tf.Variable(1, trainable=False, dtype=tf.float64)
@@ -31,7 +31,6 @@ scalarMat, gaugeMat = FieldTools.setMonopoleInitialConditions(X, Y, Z, vev)
 scalarField = tf.Variable(scalarMat, trainable=True)
 gaugeField = tf.Variable(gaugeMat, trainable=True)
 
-
 @tf.function
 def lossFn():
     return GeorgiGlashowSu2Theory.getEnergy(scalarField, gaugeField, vev, \
@@ -40,7 +39,7 @@ def lossFn():
 energy = lossFn()
 print("Initial energy: " + str(energy.numpy()))
 
-# Stopping criteria on the maximum value of the gradient
+# Stopping criterion on the maximum value of the gradient
 tol = 1e-6
 
 # Set up optimiser
@@ -83,9 +82,10 @@ print("Gradient descent finished in " + str(numSteps) + " iterations")
 print("Final energy: " + str(energy.numpy()))
 
 # Save fields as .npy files for plotting and further analysis
-np.save('X', X.numpy())
-np.save('Y', Y.numpy())
-np.save('Z', Z.numpy())
-np.save('scalarField', scalarField.numpy())
-np.save('gaugeField', gaugeField.numpy())
+outputPath = "./output/"
+np.save(outputPath + "X", X.numpy())
+np.save(outputPath + "Y", Y.numpy())
+np.save(outputPath + "Z", Z.numpy())
+np.save(outputPath + "scalarField", scalarField.numpy())
+np.save(outputPath + "gaugeField", gaugeField.numpy())
 

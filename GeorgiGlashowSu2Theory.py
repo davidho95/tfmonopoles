@@ -1,3 +1,7 @@
+'''
+Collection of functions to compute field properties in Georgi-Glashow Su(2) Theory
+'''
+
 import tensorflow as tf
 import numpy as np
 import FieldTools
@@ -14,6 +18,7 @@ def getEnergyDensity(scalarField, gaugeField, vev, selfCoupling, gaugeCoupling):
 
   return energyDensity
 
+# Wilson action
 def getYMTerm(gaugeField, gaugeCoupling):
   energyDensity = tf.zeros(tf.shape(gaugeField)[0:3], dtype=tf.float64)
 
@@ -25,6 +30,7 @@ def getYMTerm(gaugeField, gaugeCoupling):
 
   return energyDensity
 
+# Gauge kinetic term for the scalar field
 def getCovDerivTerm(scalarField, gaugeField):
   energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
   numDims = 3
@@ -33,6 +39,7 @@ def getCovDerivTerm(scalarField, gaugeField):
     energyDensity += tf.math.real(tf.linalg.trace(covDeriv @ covDeriv))
   return energyDensity
 
+# Scalar potential
 def getScalarPotential(scalarField, vev, selfCoupling):
   energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
 
@@ -40,6 +47,7 @@ def getScalarPotential(scalarField, vev, selfCoupling):
   energyDensity += selfCoupling * (vev**2 - norms)**2
   return energyDensity
 
+# Wilson plaquette on the lattice
 def getPlaquette(gaugeField, dir1, dir2):
   plaquette = gaugeField[:,:,:,dir1,:,:]
   plaquette = plaquette @ shiftGaugeField(gaugeField, dir1)[:,:,:,dir2,:,:]
@@ -48,11 +56,13 @@ def getPlaquette(gaugeField, dir1, dir2):
 
   return plaquette
 
+# Gauge covariant derivative
 def getCovDeriv(scalarField, gaugeField, dir):
   scalarFieldShifted = shiftScalarField(scalarField, dir)
   covDeriv = gaugeField[:,:,:,dir,:,:] @ scalarFieldShifted @ tf.linalg.adjoint(gaugeField[:,:,:,dir,:,:]) - scalarField
   return covDeriv
 
+# Projects out abelian subgroup of gauge field
 def getU1Projector(scalarField):
   trScalarSq = tf.linalg.trace(scalarField @ scalarField)
   latSize = tf.shape(trScalarSq)
@@ -63,6 +73,7 @@ def getU1Projector(scalarField):
 
   return u1Projector
 
+# Projects out abelian subgroup of gauge field
 def getU1Link(gaugeField, scalarField, dir):
   projector = getU1Projector(scalarField)
   projectorShifted = getU1Projector(shiftScalarField(scalarField, dir))
@@ -71,6 +82,7 @@ def getU1Link(gaugeField, scalarField, dir):
 
   return u1Link
 
+# Plaquette formed from abelian links
 def getU1Plaquette(gaugeField, scalarField, dir1, dir2):
   u1Plaquette = getU1Link(gaugeField, scalarField, dir1)
   u1Plaquette = u1Plaquette @ getU1Link(shiftGaugeField(gaugeField, dir1), shiftScalarField(scalarField, dir1), dir2)
@@ -87,6 +99,7 @@ def getMagneticField(gaugeField, scalarField, gaugeCoupling, dir):
 
   return magneticField
 
+# Shifts scalar field using twisted BC's
 def shiftScalarField(scalarField, dir):
   shiftedField = tf.roll(scalarField, -1, dir)
 
@@ -105,6 +118,7 @@ def shiftScalarField(scalarField, dir):
 
   return shiftedField
 
+# Shifts gauge field using twisted BC's
 def shiftGaugeField(gaugeField, dir):
   shiftedField = tf.roll(gaugeField, -1, dir)
 

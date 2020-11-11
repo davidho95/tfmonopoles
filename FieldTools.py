@@ -1,6 +1,11 @@
+'''
+Some tools to manipulate SU(2) gauge and adjoint scalar fields
+'''
+
 import tensorflow as tf
 import numpy as np
 
+# Generate Pauli matrices
 def pauliMatrix(cpt):
 	if (cpt == 0):
 		pauliMat = tf.constant([[0, 1], [1, 0]], dtype=tf.complex128)
@@ -10,6 +15,7 @@ def pauliMatrix(cpt):
 		pauliMat = tf.constant([[1, 0], [0, -1]], dtype=tf.complex128)
 	return pauliMat
 
+# Generate an [N, N, N] field taking random values in the SU(2) Lie algebra.
 def randomSuLieAlgField(N):
     matReal = tf.random.uniform([N, N, N, 2, 2], dtype=tf.float64)
     matImag = tf.random.uniform([N, N, N, 2, 2], dtype=tf.float64)
@@ -19,6 +25,8 @@ def randomSuLieAlgField(N):
 
     return mat
 
+# Convert an [N, N, N, 3] vector field to an [N, N, N, 2, 2] field in the SU(2)
+# Lie algebra. Equivalent to contraction with a vector field of Pauli matrices 
 def vecToSu2LieAlg(inputVectorField):
 	inputVectorField = tf.cast(inputVectorField, dtype=tf.complex128)
 	inputShape = tf.shape(inputVectorField)[0:3]
@@ -35,9 +43,10 @@ def vecToSu2(inputVectorField):
 	lieAlgField = vecToSu2LieAlg(inputVectorField)
 	return tf.linalg.expm(1j*lieAlgField)
 
-# Sets initial conditions for a single monopole at the origin with twisted boundary conditions.
-# X, Y, Z are rank-3 tensors formed as the output of meshgrid; note that 'ij' indexing must be
-# used to keep X and Y in the correct order.
+# Sets initial conditions for a single monopole at the origin with twisted
+# boundary conditions. X, Y, Z are rank-3 tensors formed as the output of 
+# meshgrid; note that 'ij' indexing must be used to keep X and Y in the correct
+# order.
 def setMonopoleInitialConditions(X, Y, Z, vev):
 	latSize = tf.shape(X)
 	r = tf.math.sqrt(X**2 + Y**2 + Z**2)
@@ -59,6 +68,7 @@ def setMonopoleInitialConditions(X, Y, Z, vev):
 
 	return scalarMat, gaugeMat
 
+# Project a [..., 2, 2] Matrix field to the SU(2) Lie algebra.
 def projectToSu2LieAlg(scalarField):
 	projectedField = scalarField
 
@@ -73,6 +83,7 @@ def projectToSu2LieAlg(scalarField):
 
 	return projectedField
 
+# Project a [..., 2, 2] Matrix field to the SU(2) Lie group.
 def projectToSu2(gaugeField):
 	projectedField = gaugeField
 
@@ -90,6 +101,7 @@ def projectToSu2(gaugeField):
 
 	return projectedField
 
+# Remove the part of a gradient field that points away from the SU(2) manifold
 def projectGaugeGradients(gaugeGradients, gaugeField):
 	trProduct = tf.linalg.trace(gaugeGradients @ tf.linalg.adjoint(gaugeField))
 	trProduct = tf.expand_dims(trProduct, -1)

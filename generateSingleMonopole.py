@@ -21,8 +21,8 @@ X,Y,Z = tf.meshgrid(x,y,z, indexing='ij')
 
 # Theory parameters
 vev = tf.Variable(1, trainable=False, dtype=tf.float64)
-selfCoupling = tf.Variable(0.125, trainable=False, dtype=tf.float64)
-gaugeCoupling = tf.Variable(0.5, trainable=False, dtype=tf.float64)
+selfCoupling = tf.Variable(0.32, trainable=False, dtype=tf.float64)
+gaugeCoupling = tf.Variable(0.8, trainable=False, dtype=tf.float64)
 
 # Set up the initial scalar and gauge fields
 scalarMat, gaugeMat = FieldTools.setMonopoleInitialConditions(X, Y, Z, vev)
@@ -34,49 +34,50 @@ gaugeField = tf.Variable(gaugeMat, trainable=True)
 
 @tf.function
 def lossFn():
-	return GeorgiGlashowSu2Theory.getEnergy(scalarField, gaugeField, vev, selfCoupling, gaugeCoupling)
+    return GeorgiGlashowSu2Theory.getEnergy(scalarField, gaugeField, vev, \
+        selfCoupling, gaugeCoupling)
 
 energy = lossFn()
 print("Initial energy: " + str(energy.numpy()))
 
 # Stopping criteria on the maximum value of the gradient
-tol = 1e-4
+tol = 1e-6
 
-# Setup optimiser
-opt = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.3)
+# Set up optimiser
+opt = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.5)
 numSteps = 0
 maxGrad = 1e6 # Initial value; a big number
 maxNumSteps = 10000
 
 while maxGrad > tol and numSteps < maxNumSteps:
-	# Compute the field energy, with tf watching the variables
-	with tf.GradientTape() as tape:
-		energy = lossFn()
+    # Compute the field energy, with tf watching the variables
+    with tf.GradientTape() as tape:
+        energy = lossFn()
 
-	vars = [scalarField, gaugeField]
+    vars = [scalarField, gaugeField]
 
-	# Compute the gradients using automatic differentiation
-	grads = tape.gradient(energy, vars)
+    # Compute the gradients using automatic differentiation
+    grads = tape.gradient(energy, vars)
 
-	# Postprocess the gauge field gradients so they point in the
-	# tangent space to SU(2)
-	grads[1] = FieldTools.projectGaugeGradients(grads[1], gaugeField)
+    # Postprocess the gauge field gradients so they point in the
+    # tangent space to SU(2)
+    grads[1] = FieldTools.projectGaugeGradients(grads[1], gaugeField)
 
-	# Compute max gradient for stopping criterion
-	maxScalarGrad = tf.math.reduce_max(tf.math.abs(grads[0]))
-	maxGaugeGrad = tf.math.reduce_max(tf.math.abs(grads[1]))
-	maxGrad = tf.math.reduce_max([maxScalarGrad, maxGaugeGrad])
+    # Compute max gradient for stopping criterion
+    maxScalarGrad = tf.math.reduce_max(tf.math.abs(grads[0]))
+    maxGaugeGrad = tf.math.reduce_max(tf.math.abs(grads[1]))
+    maxGrad = tf.math.reduce_max([maxScalarGrad, maxGaugeGrad])
 
-	print(energy.numpy())
-	print(maxGrad.numpy())
+    print(energy.numpy())
+    print(maxGrad.numpy())
 
-	# Perform the gradient descent step
-	opt.apply_gradients(zip(grads, vars))
-	numSteps += 1
+    # Perform the gradient descent step
+    opt.apply_gradients(zip(grads, vars))
+    numSteps += 1
 
-	# Postprocess the fields to avoid drift away from SU(2)/its Lie algebra
-	scalarField.assign(FieldTools.projectToSu2LieAlg(scalarField))
-	gaugeField.assign(FieldTools.projectToSu2(gaugeField))
+    # Postprocess the fields to avoid drift away from SU(2)/its Lie algebra
+    scalarField.assign(FieldTools.projectToSu2LieAlg(scalarField))
+    gaugeField.assign(FieldTools.projectToSu2(gaugeField))
 
 print("Gradient descent finished in " + str(numSteps) + " iterations")
 print("Final energy: " + str(energy.numpy()))

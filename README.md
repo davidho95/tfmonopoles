@@ -7,4 +7,4 @@ The script ```generateSingleMonopole.py``` runs a gradient descent optimisation,
 The optimised scalar and gauge fields, along with the coordinates, are printed to npy files which can be read using ```np.load()``` and used with software such as matplotlib to plot the results.
 
 ## Notes
-These calculations are not suitable for GPU optimisation, as the bulk of the computation is batch multiplication of small (2 x 2) matrices. I find that CPU operations are faster than GPU for all batch sizes that fit in GPU memory.
+These calculations are not suitable for GPU optimisation, as the bulk of the computation is batch multiplication of small (2 x 2) matrices. I find on testing that CPU operations are faster than GPU for all batch sizes that fit in GPU memory.

@@ -3,6 +3,7 @@ import numpy as np
 from ElectroweakTheoryUnitary import ElectroweakTheory
 import FieldTools
 
+# Lattic size
 N = 16
 
 # Theory parameters
@@ -128,11 +129,11 @@ while rmsGrad > tol and numSteps < maxNumSteps:
     ggrads[2] = FieldTools.projectU1Gradients(ggrads[2], hyperchargeField)
 
     # Normalise second-level gradients on a field-by-field basis
-    higgsGGradSq = FieldTools.innerProduct(grads[0], grads[0], adj=True)
+    higgsGGradSq = FieldTools.innerProduct(ggrads[0], ggrads[0], adj=True)
     isospinGGradSq = FieldTools.innerProduct(
-        grads[1], grads[1], tr=True, adj=True
+        ggrads[1], ggrads[1], tr=True, adj=True
         )
-    hyperchargeGGradSq = FieldTools.innerProduct(grads[2], grads[2], adj=True)
+    hyperchargeGGradSq = FieldTools.innerProduct(ggrads[2], ggrads[2], adj=True)
 
     ggrads[0] /= tf.cast(tf.math.sqrt(higgsGGradSq) + 1e-6, tf.complex128)
     ggrads[1] /= tf.cast(tf.math.sqrt(isospinGGradSq) + 1e-6, tf.complex128)
@@ -142,7 +143,7 @@ while rmsGrad > tol and numSteps < maxNumSteps:
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
         print("RMS gradient after " + str(numSteps) + " iterations: " +\
-            str(rmsGrad))
+            str(rmsGrad.numpy()))
 
     # Perform the gradient descent step
     opt.apply_gradients(zip(ggrads, vars))

@@ -4,7 +4,7 @@ Proof-of-concept for computing monopole and sphaleron field configurations using
 ## Generate a Magnetic Monopole
 The script ```generateSingleMonopole.py``` runs a gradient descent optimisation, minimising the energy of lattice Georgi-Glashow SU(2) Theory with twisted boundary conditions. The minimum-energy field configuration for these boundary conditions is a magnetic monopole of charge +-1. The script can be run as follows:
 
-```python generateSingleMonopole.py --size 16 --vev 1 --gaugeCoupling 1 --selfCoupling 0.5 --tol 1e-3 --outputPath [your_output_path]```
+```python -u generateSingleMonopole.py --size 16 --vev 1 --gaugeCoupling 1 --selfCoupling 0.5 --tol 1e-3 --outputPath [your_output_path]```
 
 where ```[your_output_path]``` is replaced by the directory you want to output to. To play around with the parameters of the theory, simply change the command-line argument values.
 
@@ -18,7 +18,7 @@ The script ```generateSphaleron.py``` finds a [sphaleron](https://en.wikipedia.o
 
 Like the monopole script, it can be run from the command line:
 
-```python generateSphaleron.py --size 16 --vev 1 --gaugeCoupling 1 --selfCoupling 0.304 --mixingAngle 0.5 --tol 1e-3 --outputPath [your_output_path]```
+```python -u generateSphaleron.py --size 16 --vev 1 --gaugeCoupling 1 --selfCoupling 0.304 --mixingAngle 0.5 --tol 1e-3 --outputPath [your_output_path]```
 
 The parameters in this example are (roughly) the correct boson mass ratios for the physical Standard Model.
 

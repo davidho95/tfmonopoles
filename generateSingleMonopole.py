@@ -1,14 +1,27 @@
 """
-Generates a single magnetic monopole of charge +-1.
+Generates a single magnetic monopole of charge +1.
 """
 
 import tensorflow as tf
 import numpy as np
 from GeorgiGlashowSu2Theory import GeorgiGlashowSu2Theory
 import FieldTools
+import argparse
+
+parser = argparse.ArgumentParser(description="Generate a single monopole")
+parser.add_argument("--size", "-s", default=16, type=int)
+parser.add_argument("--vev", "-v", default=1.0, type=float)
+parser.add_argument("--gaugeCoupling", "-g", default=1.0, type=float)
+parser.add_argument("--selfCoupling", "-l", default=0.5, type=float)
+parser.add_argument("--tol", "-t", default=1e-6, type=float)
+parser.add_argument("--outputPath", "-o", default=".", type=str)
+parser.add_argument("--inputPath", "-i", default="", type=str)
+
+
+args = parser.parse_args()
 
 # Lattice Size
-N = 16
+N = args.size
 
 # Set up the lattice
 x = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
@@ -19,37 +32,44 @@ X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 
 # Theory parameters
 params = {
-    "vev" : 1.0,
-    "selfCoupling" : 0.32,
-    "gaugeCoupling" : 0.8 
+    "vev" : args.vev,
+    "selfCoupling" : args.selfCoupling,
+    "gaugeCoupling" : args.gaugeCoupling
 }
 
 
 # Set up the initial scalar and gauge fields
-scalarMat, gaugeMat = FieldTools.setMonopoleInitialConditions(X, Y, Z, params["vev"])
+inputPath = args.inputPath
+if inputPath == "":
+    scalarMat, gaugeMat = FieldTools.setMonopoleInitialConditions(
+        X, Y, Z, params["vev"]
+        )
+else:
+    scalarMat = np.load(inputPath + "/scalarField.npy")
+    gaugeMat = np.load(inputPath + "/gaugeField.npy")
 
 # Convert to tf Variables so gradients can be tracked
 scalarField = tf.Variable(scalarMat, trainable=True)
 gaugeField = tf.Variable(gaugeMat, trainable=True)
 
-myTheory = GeorgiGlashowSu2Theory(params)
+theory = GeorgiGlashowSu2Theory(params)
 
 @tf.function
 def lossFn():
-    return myTheory.energy(scalarField, gaugeField)
+    return theory.energy(scalarField, gaugeField)
 energy = lossFn()
 
 # Stopping criterion on the maximum value of the gradient
-tol = 1e-6
+tol = args.tol
 
 # Set up optimiser
 opt = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.5)
 numSteps = 0
-maxGrad = 1e6 # Initial value; a big number
+rmsGrad = 1e6 # Initial value; a big number
 maxNumSteps = 10000
 printIncrement = 10
 
-while maxGrad > tol and numSteps < maxNumSteps:
+while rmsGrad > tol and numSteps < maxNumSteps:
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as tape:
         energy = lossFn()
@@ -61,18 +81,19 @@ while maxGrad > tol and numSteps < maxNumSteps:
 
     # Postprocess the gauge field gradients so they point in the tangent space 
     # to SU(2)
-    grads[1] = FieldTools.projectGaugeGradients(grads[1], gaugeField)
+    grads[1] = FieldTools.projectSu2Gradients(grads[1], gaugeField)
 
     # Compute max gradient for stopping criterion
-    maxScalarGrad = tf.math.reduce_max(tf.math.abs(grads[0]))
-    maxGaugeGrad = tf.math.reduce_max(tf.math.abs(grads[1]))
-    maxGrad = tf.math.reduce_max([maxScalarGrad, maxGaugeGrad])
+    gradSq = FieldTools.innerProduct(grads[0], grads[0], tr=True)
+    gradSq += FieldTools.innerProduct(grads[1], grads[1], tr=True, adj=True)
+
+    rmsGrad = tf.sqrt(gradSq)
 
     if (numSteps % printIncrement == 0):
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
-        print("Max gradient after " + str(numSteps) + " iterations: " +\
-            str(maxGrad.numpy()))
+        print("RMS gradient after " + str(numSteps) + " iterations: " +\
+            str(rmsGrad.numpy()))
 
     # Perform the gradient descent step
     opt.apply_gradients(zip(grads, vars))
@@ -86,11 +107,11 @@ print("Gradient descent finished in " + str(numSteps) + " iterations")
 print("Final energy: " + str(energy.numpy()))
 
 # Save fields as .npy files for plotting and further analysis
-outputPath = "./output/"
-np.save(outputPath + "X", X.numpy())
-np.save(outputPath + "Y", Y.numpy())
-np.save(outputPath + "Z", Z.numpy())
-np.save(outputPath + "scalarField", scalarField.numpy())
-np.save(outputPath + "gaugeField", gaugeField.numpy())
-np.save(outputPath + "params", params)
+outputPath = args.outputPath
+np.save(outputPath + "/X", X.numpy())
+np.save(outputPath + "/Y", Y.numpy())
+np.save(outputPath + "/Z", Z.numpy())
+np.save(outputPath + "/scalarField", scalarField.numpy())
+np.save(outputPath + "/gaugeField", gaugeField.numpy())
+np.save(outputPath + "/params", params)
 

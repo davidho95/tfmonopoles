@@ -2,16 +2,29 @@ import tensorflow as tf
 import numpy as np
 from ElectroweakTheoryUnitary import ElectroweakTheory
 import FieldTools
+import argparse
+
+parser = argparse.ArgumentParser(description="Generate a single monopole")
+parser.add_argument("--size", "-s", default=16, type=int)
+parser.add_argument("--vev", "-v", default=1.0, type=float)
+parser.add_argument("--gaugeCoupling", "-g", default=1.0, type=float)
+parser.add_argument("--selfCoupling", "-l", default=0.125, type=float)
+parser.add_argument("--mixingAngle", "-q", default=0.5, type=float)
+parser.add_argument("--tol", "-t", default=1e-6, type=float)
+parser.add_argument("--outputPath", "-o", default=".", type=str)
+parser.add_argument("--inputPath", "-i", default="", type=str)
+
+args = parser.parse_args()
 
 # Lattic size
-N = 16
+N = args.size
 
 # Theory parameters
 params = {
-    "vev" : 1,
-    "gaugeCoupling" : 1, # $\lambda / g^2$ reflects physical boson mass ratio
-    "selfCoupling" : 0.304, 
-    "mixingAngle" : 0.5 # Close to the physical value
+    "vev" : args.vev,
+    "gaugeCoupling" : args.gaugeCoupling,
+    "selfCoupling" : args.selfCoupling, 
+    "mixingAngle" : args.mixingAngle
 }
 
 # Set up the lattice
@@ -23,9 +36,16 @@ X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 
 theory = ElectroweakTheory(params)
 
-higgsMat, isospinMat, hyperchargeMat = FieldTools.setSphaleronInitialConditions(
+inputPath = args.inputPath
+if inputPath == "":
+    higgsMat, isospinMat, hyperchargeMat = \
+    FieldTools.setSphaleronInitialConditions(
     X, Y, Z, params["vev"], params["gaugeCoupling"]
-    )
+        )
+else:
+    higgsMat = np.load(inputPath + "/higgsField.npy")
+    isospinMat = np.load(inputPath + "/isospinField.npy")
+    hyperchargeMat = np.load(inputPath + "/hyperchargeField.npy")
 
 # Set up variables so tf can watch the gradients
 higgsField = tf.Variable(higgsMat, trainable=True)
@@ -38,7 +58,7 @@ def lossFn():
 energy = lossFn()
 
 # Stopping criterion on RMS gradient
-tol = 1e-3
+tol = args.tol
 
 # Just need to satisfy rmsGrad < rmsGradOld to start the loop
 rmsGrad = 1e6
@@ -158,11 +178,11 @@ print("Gradient descent finished in " + str(numSteps) + " iterations")
 print("Final energy: " + str(energy.numpy()))
 
 # Save fields as .npy files for plotting and further analysis
-outputPath = "./output/"
-np.save(outputPath + "X", X.numpy())
-np.save(outputPath + "Y", Y.numpy())
-np.save(outputPath + "Z", Z.numpy())
-np.save(outputPath + "higgsField", higgsField.numpy())
-np.save(outputPath + "isospinField", isospinField.numpy())
-np.save(outputPath + "hyperchargeField", hyperchargeField.numpy())
-np.save(outputPath + "params", params)
+outputPath = args.outputPath
+np.save(outputPath + "./X", X.numpy())
+np.save(outputPath + "./Y", Y.numpy())
+np.save(outputPath + "./Z", Z.numpy())
+np.save(outputPath + "./higgsField", higgsField.numpy())
+np.save(outputPath + "./isospinField", isospinField.numpy())
+np.save(outputPath + "./hyperchargeField", hyperchargeField.numpy())
+np.save(outputPath + "./params", params)

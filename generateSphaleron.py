@@ -93,7 +93,7 @@ print("Energy reached: " + str(energy.numpy()))
 opt = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.9)
 numSteps = 0
 
-while gradSq > tol and numSteps < maxNumSteps:
+while rmsGrad > tol and numSteps < maxNumSteps:
     vars = [higgsField, isospinField, hyperchargeField]
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as outterTape:
@@ -120,6 +120,7 @@ while gradSq > tol and numSteps < maxNumSteps:
         gradSq += tf.math.real(
             tf.reduce_sum(tf.linalg.adjoint(grads[2]) @ grads[2])
             )
+        rmsGrad = tf.sqrt(gradSq)
 
     # Compute the second-level gradients (gradient of gradient squared)
     ggrads = outterTape.gradient(gradSq, vars)
@@ -141,7 +142,7 @@ while gradSq > tol and numSteps < maxNumSteps:
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
         print("RMS gradient after " + str(numSteps) + " iterations: " +\
-            str(np.sqrt(gradSq.numpy())))
+            str(rmsGrad))
 
     # Perform the gradient descent step
     opt.apply_gradients(zip(ggrads, vars))

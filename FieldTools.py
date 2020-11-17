@@ -131,21 +131,30 @@ def projectToSu2LieAlg(scalarField):
     return projectedField
 
 # Project a [..., 2, 2] Matrix field to the SU(2) Lie group.
+# This has some array maniupulation in to avoid big overheads with calculating
+# determinants and inverses for 2 x 2 matrices using built-in functions
 def projectToSu2(gaugeField):
     projectedField = gaugeField
 
+    adjugate1 = tf.stack([gaugeField[...,1,1], -gaugeField[...,0,1]], -1)
+    adjugate2 = tf.stack([-gaugeField[...,1,0], gaugeField[...,0,0]], -1)
+
+    adjugate = tf.math.conj(tf.stack([adjugate1, adjugate2], -1))
+
     # Make proportional to unitary matrix
-    determinant = tf.linalg.det(projectedField)
+    determinant = gaugeField[...,0,0]*gaugeField[...,1,1] -\
+        gaugeField[...,0,1]*gaugeField[...,1,0]
     determinant = tf.expand_dims(determinant, -1)
     determinant = tf.expand_dims(determinant, -1)
-    projectedField.assign(0.5*(projectedField + \
-        tf.linalg.adjoint(tf.linalg.inv(projectedField)) * determinant))
+    projectedField = (0.5*(projectedField + \
+        adjugate))
 
     # Normalise
-    determinant = tf.linalg.det(projectedField)
+    determinant = gaugeField[...,0,0]*gaugeField[...,1,1] -\
+        gaugeField[...,0,1]*gaugeField[...,1,0]
     determinant = tf.expand_dims(determinant, -1)
     determinant = tf.expand_dims(determinant, -1)
-    projectedField.assign(projectedField / tf.math.sqrt(determinant))
+    projectedField = (projectedField / tf.math.sqrt(determinant))
 
     return projectedField
 

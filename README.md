@@ -12,7 +12,9 @@ The script ```generateSphaleron.py``` finds a [sphaleron](https://en.wikipedia.o
 1. A standard gradient descent optimisation is carried out from suitably chosen initial conditions to take the field as close as possible to the saddle point. No acceleration is used on the gradient descent to exploit the algorithm's tendency to get stuck in saddle points.
 2. The final convergence is carried out using gradient squared descent: by summing the squares of the gradients of the energy, and using this as the objective function to be minimised. The second-level gradients are normalised on a field by field basis to speed convergence.
 
-The optimised Higgs, isospin and hypercharge fields ar printed to npy files for analysis.
+Saddle point finding is much more difficult than minimising, and accordingly this script takes longer to run, but with the given theory parameters it takes around 15 minutes on four intel i5-4460 cores for a 16 x 16 x 16 lattice.
+
+The optimised Higgs, isospin and hypercharge fields are printed to npy files for analysis.
 
 ## Notes
 These calculations are not suitable for GPU optimisation, as the bulk of the computation is batch multiplication of small (2 x 2) matrices. I find on testing that CPU operations are faster than GPU for all batch sizes that fit in GPU memory.

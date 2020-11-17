@@ -13,8 +13,13 @@ parser.add_argument("--mixingAngle", "-q", default=0.5, type=float)
 parser.add_argument("--tol", "-t", default=1e-6, type=float)
 parser.add_argument("--outputPath", "-o", default=".", type=str)
 parser.add_argument("--inputPath", "-i", default="", type=str)
+parser.add_argument("--numCores", "-n", default=0, type=int)
 
 args = parser.parse_args()
+
+if args.numCores != 0:
+    tf.config.threading.set_intra_op_parallelism_threads(args.numCores)
+    tf.config.threading.set_inter_op_parallelism_threads(args.numCores)
 
 # Lattic size
 N = args.size
@@ -69,7 +74,7 @@ maxNumSteps = 1000000
 printIncrement = 10
 
 # First perform standard gradient descent to get close to the saddle point
-opt = tf.keras.optimizers.SGD(learning_rate=0.02)
+opt = tf.keras.optimizers.SGD(learning_rate=0.02*args.gaugeCoupling*args.vev)
 while rmsGrad < rmsGradOld and numSteps < maxNumSteps:
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as tape:

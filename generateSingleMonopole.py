@@ -16,9 +16,13 @@ parser.add_argument("--selfCoupling", "-l", default=0.5, type=float)
 parser.add_argument("--tol", "-t", default=1e-6, type=float)
 parser.add_argument("--outputPath", "-o", default=".", type=str)
 parser.add_argument("--inputPath", "-i", default="", type=str)
-
+parser.add_argument("--numCores", "-n", default=0, type=int)
 
 args = parser.parse_args()
+
+if args.numCores != 0:
+    tf.config.threading.set_intra_op_parallelism_threads(args.numCores)
+    tf.config.threading.set_inter_op_parallelism_threads(args.numCores)
 
 # Lattice Size
 N = args.size
@@ -63,7 +67,9 @@ energy = lossFn()
 tol = args.tol
 
 # Set up optimiser
-opt = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.5)
+opt = tf.keras.optimizers.SGD(
+    learning_rate=0.01*args.gaugeCoupling*args.vev, momentum=0.5
+    )
 numSteps = 0
 rmsGrad = 1e6 # Initial value; a big number
 maxNumSteps = 10000

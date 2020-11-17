@@ -28,3 +28,8 @@ The optimised Higgs, isospin and hypercharge fields are printed to npy files for
 
 ## Notes
 These calculations are not suitable for GPU optimisation, as the bulk of the computation is batch multiplication of small (2 x 2) matrices. I find on testing that CPU operations are faster than GPU for all batch sizes that fit in GPU memory.
+
+Tested on:
+Python 3.8.5
+TensorFlow 2.3.0
+Windows 10 & Ubuntu 16.04.5

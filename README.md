@@ -14,7 +14,7 @@ The script ```generateSphaleron.py``` finds a [sphaleron](https://en.wikipedia.o
 
 Saddle point finding is much more difficult than minimising, and accordingly this script takes longer to run, but with the given theory parameters it takes around 15 minutes on four intel i5-4460 cores for a 16 x 16 x 16 lattice.
 
-The optimised Higgs, isospin and hypercharge fields ar printed to npy files for analysis.
+The optimised Higgs, isospin and hypercharge fields are printed to npy files for analysis.
 
 ## Notes
 These calculations are not suitable for GPU optimisation, as the bulk of the computation is batch multiplication of small (2 x 2) matrices. I find on testing that CPU operations are faster than GPU for all batch sizes that fit in GPU memory.

@@ -181,3 +181,16 @@ def projectU1Gradients(u1Gradients, u1Field):
     projectedGradients = u1Gradients - tf.cast(tf.math.real(gradFieldProduct), tf.complex128) @ u1Field
 
     return projectedGradients
+
+# Compute the inner product of two fields
+# If trace is True, trace is taken before summing
+# If adjoint is true, the first argument is hermitian conjugated
+def innerProduct(field1, field2, tr=True, adj=False):
+    input1 = tf.linalg.adjoint(field1) if adj else field1
+    input2 = field2
+
+    productField = input1 @ input2
+    if tr:
+        productField = tf.linalg.trace(productField)
+
+    return tf.math.abs(tf.reduce_sum(productField))

@@ -39,11 +39,9 @@ energy = lossFn()
 # Stopping criterion on RMS gradient
 tol = 1e-3
 
-print(energy.numpy())
-
-# Just need to satisfy maxGrad < maxGradOld to start the loop
-maxGrad = 1e6
-maxGradOld = 1e7
+# Just need to satisfy rmsGrad < rmsGradOld to start the loop
+rmsGrad = 1e6
+rmsGradOld = 1e7
 
 numSteps = 0
 maxNumSteps = 1000000
@@ -51,7 +49,7 @@ printIncrement = 10
 
 # First perform standard gradient descent to get close to the saddle point
 opt = tf.keras.optimizers.SGD(learning_rate=0.02)
-while maxGrad < maxGradOld and numSteps < maxNumSteps:
+while rmsGrad < rmsGradOld and numSteps < maxNumSteps:
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as tape:
         energy = lossFn()
@@ -65,30 +63,19 @@ while maxGrad < maxGradOld and numSteps < maxNumSteps:
     grads[1] = FieldTools.projectSu2Gradients(grads[1], isospinField)
     grads[2] = FieldTools.projectU1Gradients(grads[2], hyperchargeField)
 
-    gradSq = tf.math.real(
-        tf.reduce_sum(tf.linalg.adjoint(grads[0]) @ grads[0])
-        )
-    gradSq += tf.math.real(
-        tf.reduce_sum(tf.linalg.trace(tf.linalg.adjoint(grads[1]) @ grads[1]))
-        )
-    gradSq += tf.math.real(
-        tf.reduce_sum(tf.linalg.adjoint(grads[2]) @ grads[2])
-        )
+    # Compute rms gradient for stopping criterion
+    gradSq = FieldTools.innerProduct(grads[0], grads[0], adj=True)
+    gradSq += FieldTools.innerProduct(grads[1], grads[1], tr=True, adj=True)
+    gradSq += FieldTools.innerProduct(grads[1], grads[1], adj=True)
 
-    # Compute max gradient for stopping criterion
-    maxGradOld = maxGrad
-    maxHiggsGrad = tf.math.reduce_max(tf.math.abs(grads[0]))
-    maxIsospinGrad = tf.math.reduce_max(tf.math.abs(grads[1]))
-    maxHyperchargeGrad = tf.math.reduce_max(tf.math.abs(grads[2]))
-    maxGrad = tf.math.reduce_max(
-        [maxHiggsGrad, maxIsospinGrad, maxHyperchargeGrad]
-        )
+    rmsGradOld = rmsGrad
+    rmsGrad = tf.math.sqrt(gradSq)
 
     if (numSteps % printIncrement == 0):
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
-        print("Max gradient after " + str(numSteps) + " iterations: " +\
-            str(maxGrad.numpy()))
+        print("RMS gradient after " + str(numSteps) + " iterations: " +\
+            str(rmsGrad.numpy()))
 
     # Perform the gradient descent step
     opt.apply_gradients(zip(grads, vars))
@@ -106,7 +93,7 @@ print("Energy reached: " + str(energy.numpy()))
 opt = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.9)
 numSteps = 0
 
-while tf.math.sqrt(gradSq) > tol and numSteps < maxNumSteps:
+while gradSq > tol and numSteps < maxNumSteps:
     vars = [higgsField, isospinField, hyperchargeField]
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as outterTape:
@@ -120,6 +107,8 @@ while tf.math.sqrt(gradSq) > tol and numSteps < maxNumSteps:
         grads[1] = FieldTools.projectSu2Gradients(grads[1], isospinField)
         grads[2] = FieldTools.projectU1Gradients(grads[2], hyperchargeField)
 
+        # Compute squared gradients (note that as this is being tracked we can't
+        # use the innerProduct function due to passing by value)
         gradSq = tf.math.real(
             tf.reduce_sum(tf.linalg.adjoint(grads[0]) @ grads[0])
             )
@@ -137,17 +126,13 @@ while tf.math.sqrt(gradSq) > tol and numSteps < maxNumSteps:
     ggrads[1] = FieldTools.projectSu2Gradients(ggrads[1], isospinField)
     ggrads[2] = FieldTools.projectU1Gradients(ggrads[2], hyperchargeField)
 
-    higgsGGradSq = tf.math.real(
-        tf.reduce_sum(tf.linalg.adjoint(ggrads[0]) @ ggrads[0])
-        )
-    isospinGGradSq = tf.math.real(
-        tf.reduce_sum(tf.linalg.trace(tf.linalg.adjoint(ggrads[1]) @ ggrads[1]))
-        )
-    hyperchargeGGradSq = tf.math.real(
-        tf.reduce_sum(tf.linalg.adjoint(ggrads[2]) @ ggrads[2])
-        )
-
     # Normalise second-level gradients on a field-by-field basis
+    higgsGGradSq = FieldTools.innerProduct(grads[0], grads[0], adj=True)
+    isospinGGradSq = FieldTools.innerProduct(
+        grads[1], grads[1], tr=True, adj=True
+        )
+    hyperchargeGGradSq = FieldTools.innerProduct(grads[2], grads[2], adj=True)
+
     ggrads[0] /= tf.cast(tf.math.sqrt(higgsGGradSq) + 1e-6, tf.complex128)
     ggrads[1] /= tf.cast(tf.math.sqrt(isospinGGradSq) + 1e-6, tf.complex128)
     ggrads[2] /= tf.cast(tf.math.sqrt(hyperchargeGGradSq) + 1e-6, tf.complex128)

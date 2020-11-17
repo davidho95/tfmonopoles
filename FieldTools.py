@@ -16,7 +16,7 @@ def pauliMatrix(cpt):
     return pauliMat
 
 # Generate an [N, N, N] field taking random values in the SU(2) Lie algebra.
-def randomSuLieAlgField(N):
+def randomSu2LieAlgField(N):
     matReal = tf.random.uniform([N, N, N, 2, 2], dtype=tf.float64)
     matImag = tf.random.uniform([N, N, N, 2, 2], dtype=tf.float64)
     mat = tf.complex(matReal, matImag)
@@ -80,6 +80,40 @@ def setMonopoleInitialConditions(X, Y, Z, vev):
 
     return scalarMat, gaugeMat
 
+# Sets initial conditions for an Electroweak sphaleron at the origin with periodic
+# boundary conditions. X, Y, Z are rank-3 tensors formed as the output of 
+# meshgrid; note that 'ij' indexing must be used to keep X and Y in the correct
+# order.
+def setSphaleronInitialConditions(X, Y, Z, vev, gaugeCouping):
+    latSize = tf.shape(X)
+    r = tf.math.sqrt(X**2 + Y**2 + Z**2)
+
+    zeroMat = tf.zeros(latSize, dtype=tf.float64)
+    gaugeFn = 1/tf.math.cosh(vev*gaugeCouping*r/3)
+    higgsFn = tf.cast(tf.math.tanh(vev*gaugeCouping*r/3), tf.complex128)
+
+    higgsMat = 1/np.sqrt(2) * vev * tf.ones(latSize, dtype=tf.complex128) * higgsFn
+    higgsMat = tf.expand_dims(higgsMat, -1)
+    higgsMat = tf.expand_dims(higgsMat, -1)
+
+    isospinVecX = tf.stack([zeroMat, Z / r**2 * gaugeFn, -Y / r**2 * gaugeFn], -1)
+    isospinVecY = tf.stack([-Z / r**2 * gaugeFn, zeroMat, X / r**2 * gaugeFn], -1)
+    isospinVecZ = tf.stack([Y / r**2 * gaugeFn, -X / r**2 * gaugeFn, zeroMat], -1)
+
+    isospinMatX = vecToSu2(isospinVecX)
+    isospinMatY = vecToSu2(isospinVecY)
+    isospinMatZ = vecToSu2(isospinVecZ)
+    isospinMat = tf.stack([isospinMatX, isospinMatY, isospinMatZ], axis=-3)
+
+    hyperchargeMat = tf.ones(latSize, dtype=tf.complex128)
+    hyperchargeMat = tf.expand_dims(hyperchargeMat, -1)
+    hyperchargeMat = tf.expand_dims(hyperchargeMat, -1)
+
+    hyperchargeMat = tf.stack([hyperchargeMat, hyperchargeMat, hyperchargeMat], -3)
+
+    return higgsMat, isospinMat, hyperchargeMat
+
+
 # Project a [..., 2, 2] Matrix field to the SU(2) Lie algebra.
 def projectToSu2LieAlg(scalarField):
     projectedField = scalarField
@@ -115,16 +149,35 @@ def projectToSu2(gaugeField):
 
     return projectedField
 
+# Project a [..., 1, 1] field to the U(1) Lie group
+def projectToU1(gaugeField):
+    projectedField = gaugeField
+
+    # Normalise
+    magnitude = tf.abs(gaugeField)
+    projectedField.assign(projectedField / tf.cast(magnitude, tf.complex128))
+
+    return projectedField
+
 # Remove the part of a gradient field that points away from the SU(2) manifold
-def projectGaugeGradients(gaugeGradients, gaugeField):
-    trProduct = tf.linalg.trace(gaugeGradients @ tf.linalg.adjoint(gaugeField))
+def projectSu2Gradients(su2Gradients, su2Field):
+    trProduct = tf.linalg.trace(su2Gradients @ tf.linalg.adjoint(su2Field))
     trProduct = tf.expand_dims(trProduct, -1)
     trProduct = tf.expand_dims(trProduct, -1)
 
     # print(tf.shape(trProduct))
 
-    projectedGradients = gaugeGradients - 0.5*trProduct*gaugeField
+    projectedGradients = su2Gradients - 0.5*trProduct*su2Field
 
     return projectedGradients
 
 
+# # Remove the part of a gradient field that points away from the U(1) manifold
+def projectU1Gradients(u1Gradients, u1Field):
+    gradFieldProduct = u1Gradients @ tf.linalg.adjoint(u1Field)
+
+    # print(tf.shape(trProduct))
+
+    projectedGradients = u1Gradients - tf.cast(tf.math.real(gradFieldProduct), tf.complex128) @ u1Field
+
+    return projectedGradients

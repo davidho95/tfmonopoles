@@ -150,8 +150,8 @@ def projectToSu2(gaugeField):
         adjugate))
 
     # Normalise
-    determinant = gaugeField[...,0,0]*gaugeField[...,1,1] -\
-        gaugeField[...,0,1]*gaugeField[...,1,0]
+    determinant = projectedField[...,0,0]*projectedField[...,1,1] -\
+        projectedField[...,0,1]*projectedField[...,1,0]
     determinant = tf.expand_dims(determinant, -1)
     determinant = tf.expand_dims(determinant, -1)
     projectedField = (projectedField / tf.math.sqrt(determinant))

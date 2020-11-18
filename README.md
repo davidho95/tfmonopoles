@@ -6,7 +6,7 @@ The script ```generateSingleMonopole.py``` runs a gradient descent optimisation,
 
 ```python -u generateSingleMonopole.py --size 16 --vev 1 --gaugeCoupling 1 --selfCoupling 0.5 --tol 1e-3 --outputPath [your_output_path]```
 
-where ```[your_output_path]``` is replaced by the directory you want to output to. To play around with the parameters of the theory, simply change the command-line argument values. Depending upon your system, you may need to replace ```python``` with ```python3```
+where ```[your_output_path]``` is replaced by the directory you want to output to. To play around with the parameters of the theory, simply change the command-line argument values. Depending upon your system, you may need to replace ```python``` with ```python3```.
 
 The optimised scalar and gauge fields, along with the coordinates, are printed to npy files which can be read using ```np.load()``` and used with software such as matplotlib to plot the results.
 

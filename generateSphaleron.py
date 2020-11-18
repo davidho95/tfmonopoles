@@ -10,7 +10,7 @@ parser.add_argument("--vev", "-v", default=1.0, type=float)
 parser.add_argument("--gaugeCoupling", "-g", default=1.0, type=float)
 parser.add_argument("--selfCoupling", "-l", default=0.125, type=float)
 parser.add_argument("--mixingAngle", "-q", default=0.5, type=float)
-parser.add_argument("--tol", "-t", default=1e-6, type=float)
+parser.add_argument("--tol", "-t", default=1e-3, type=float)
 parser.add_argument("--outputPath", "-o", default=".", type=str)
 parser.add_argument("--inputPath", "-i", default="", type=str)
 parser.add_argument("--numCores", "-n", default=0, type=int)
@@ -116,7 +116,7 @@ print("First gradient descent completed in " + str(numSteps) + " iterations")
 print("Energy reached: " + str(energy.numpy()))
 
 # Now minimise the RMS gradient summed over all sites
-opt = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.9)
+opt = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.95)
 numSteps = 0
 
 while rmsGrad > tol and numSteps < maxNumSteps:

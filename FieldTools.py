@@ -30,7 +30,7 @@ def randomSu2LieAlgField(N):
 
     return mat
 
-# Convert an [N, N, N, 3] vector field to an [N, N, N, 2, 2] field in the SU(2)
+# Convert an [..., 3] vector field to an [..., 2, 2] field in the SU(2)
 # Lie algebra. Equivalent to contraction with a vector field of Pauli matrices 
 def vecToSu2LieAlg(inputVectorField):
     inputVectorField = tf.cast(inputVectorField, dtype=tf.complex128)
@@ -50,9 +50,34 @@ def vecToSu2LieAlg(inputVectorField):
 
     return outputField
 
+# Converts a [..., 3] vector field to a [..., 2, 2] SU(2) field
 def vecToSu2(inputVectorField):
     lieAlgField = vecToSu2LieAlg(inputVectorField)
     return tf.linalg.expm(1j*lieAlgField)
+
+# Converts a [..., 2, 2] SU(2) field to a [..., 3] SU(2) field
+def su2ToVec(inputField):
+    latShape = tf.shape(inputField)[0:3]
+    outputShape = tf.concat([latShape, [3]], 0)
+
+    zeroTol = 1e-15
+    cosVecNorm = 0.5*tf.math.real(tf.linalg.trace(inputField))
+
+    outputVec0 = tf.zeros(latShape, dtype=tf.float64)
+    outputVec1 = tf.zeros(latShape, dtype=tf.float64)
+    outputVec2 = tf.zeros(latShape, dtype=tf.float64)
+
+    vecNorm = tf.math.acos(cosVecNorm)
+
+    # This will clip values of +-pi to zero
+    outputVec0 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
+        tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(0)))
+    outputVec1 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
+        tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(1)))
+    outputVec2 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
+        tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(2)))
+
+    return tf.stack([outputVec0, outputVec1, outputVec2], -1)
 
 # Sets initial conditions for a single monopole at the origin with twisted
 # boundary conditions. X, Y, Z are rank-3 tensors formed as the output of 
@@ -187,7 +212,9 @@ def projectU1Gradients(u1Gradients, u1Field):
 
     # print(tf.shape(trProduct))
 
-    projectedGradients = u1Gradients - tf.cast(tf.math.real(gradFieldProduct), tf.complex128) @ u1Field
+    projectedGradients = u1Gradients - tf.cast(
+        tf.math.real(gradFieldProduct), tf.complex128
+        ) @ u1Field
 
     return projectedGradients
 
@@ -203,3 +230,4 @@ def innerProduct(field1, field2, tr=True, adj=False):
         productField = tf.linalg.trace(productField)
 
     return tf.math.abs(tf.reduce_sum(productField))
+

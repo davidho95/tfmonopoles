@@ -9,7 +9,7 @@ import FieldTools
 import argparse
 
 parser = argparse.ArgumentParser(description="Generate a single monopole")
-parser.add_argument("--size", "-s", default=16, type=int)
+parser.add_argument("--size", "-s", default=[16], type=int, nargs="*")
 parser.add_argument("--vev", "-v", default=1.0, type=float)
 parser.add_argument("--gaugeCoupling", "-g", default=1.0, type=float)
 parser.add_argument("--selfCoupling", "-l", default=0.5, type=float)
@@ -24,13 +24,22 @@ if args.numCores != 0:
     tf.config.threading.set_intra_op_parallelism_threads(args.numCores)
     tf.config.threading.set_inter_op_parallelism_threads(args.numCores)
 
-# Lattice Size
-N = args.size
+# Lattice Size can be a single integer or a list of three; if single integer
+# a cubic lattice is generated
+latShape = args.size
+if len(latShape) == 1:
+    Nx = latShape[0]
+    Ny = latShape[0]
+    Nz = latShape[0]
+else:
+    Nx, Ny, Nz = latShape
 
 # Set up the lattice
-x = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
-y = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
-z = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
+x = tf.cast(tf.linspace(-(Nx-1)/2, (Nx-1)/2, Nx), tf.float64)
+y = tf.cast(tf.linspace(-(Ny-1)/2, (Ny-1)/2, Ny), tf.float64)
+z = tf.cast(tf.linspace(-(Nz-1)/2, (Nz-1)/2, Nz), tf.float64)
+
+X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 
 X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 

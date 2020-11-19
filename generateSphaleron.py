@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from ElectroweakTheoryUnitary import ElectroweakTheory
+from theories.ElectroweakTheoryUnitary import ElectroweakTheory
 import FieldTools
 import argparse
 

@@ -4,7 +4,7 @@ from theories.ElectroweakTheoryUnitary import ElectroweakTheory
 import FieldTools
 import argparse
 
-parser = argparse.ArgumentParser(description="Generate a single monopole")
+parser = argparse.ArgumentParser(description="Generate an Electroweak sphaleron")
 parser.add_argument("--size", "-s", default=16, type=int)
 parser.add_argument("--vev", "-v", default=1.0, type=float)
 parser.add_argument("--gaugeCoupling", "-g", default=1.0, type=float)

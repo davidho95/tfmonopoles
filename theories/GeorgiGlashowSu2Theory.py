@@ -179,7 +179,7 @@ class GeorgiGlashowSu2Theory:
             2, batch_shape=identityBatchShape, dtype=tf.complex128
             )
         pauliMatrices = 1j*tf.eye(2, batch_shape=complementaryBatchShape,\
-            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum - 1)
+            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
 
         # Concatenating identities with pauli matrices gives a tensor the same
         # size as the input
@@ -210,7 +210,7 @@ class GeorgiGlashowSu2Theory:
             2, batch_shape=identityBatchShape, dtype=tf.complex128
             )
         pauliMatrices = tf.eye(2, batch_shape=complementaryBatchShape,\
-            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum - 1)
+            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
 
         # Concatenating identities with pauli matrices gives a tensor the same
         # size as the input

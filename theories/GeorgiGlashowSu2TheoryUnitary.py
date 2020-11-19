@@ -25,8 +25,8 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
     # Gauge covariant derivative
     def covDeriv(self, scalarField, gaugeField, dir):
         scalarFieldShifted = self.shiftScalarField(scalarField, dir)
-        lieAlgField = scalarField * FieldTools.pauliMatrix(2)
-        lieAlgFieldShifted = scalarFieldShifted * FieldTools.pauliMatrix(2)
+        lieAlgField = scalarField * FieldTools.pauliMatrix(3)
+        lieAlgFieldShifted = scalarFieldShifted * FieldTools.pauliMatrix(3)
         covDeriv = gaugeField[:,:,:,dir,:,:] @ lieAlgFieldShifted @\
             tf.linalg.adjoint(gaugeField[:,:,:,dir,:,:]) - lieAlgField
         return covDeriv

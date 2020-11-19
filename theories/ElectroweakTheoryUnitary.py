@@ -96,7 +96,7 @@ class ElectroweakTheory:
                 tf.math.real(tf.linalg.trace(hyperchargeField[:,:,:,ii,:,:]))
             energyDensity += higgsMagnitude * higgsMagnitudeShifted *\
                 tf.math.imag(tf.linalg.trace(isospinField[:,:,:,ii,:,:] @\
-                FieldTools.pauliMatrix(2))) *\
+                FieldTools.pauliMatrix(3))) *\
                 tf.math.imag(tf.linalg.trace(hyperchargeField[:,:,:,ii,:,:]))
 
 

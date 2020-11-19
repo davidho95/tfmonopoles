@@ -5,13 +5,15 @@ Some tools to manipulate SU(2) gauge and adjoint scalar fields
 import tensorflow as tf
 import numpy as np
 
-# Generate Pauli matrices
+# Generate Pauli matrices, using convention that 0th pauli matrix is the identity
 def pauliMatrix(cpt):
     if (cpt == 0):
-        pauliMat = tf.constant([[0, 1], [1, 0]], dtype=tf.complex128)
+        pauliMat = tf.constant([[1, 0], [0, 1]], dtype=tf.complex128)
     if (cpt == 1):
-        pauliMat = tf.constant([[0j, -1j], [1j, 0j]], dtype=tf.complex128)
+        pauliMat = tf.constant([[0, 1], [1, 0]], dtype=tf.complex128)
     if (cpt == 2):
+        pauliMat = tf.constant([[0j, -1j], [1j, 0j]], dtype=tf.complex128)
+    if (cpt == 3):
         pauliMat = tf.constant([[1, 0], [0, -1]], dtype=tf.complex128)
     return pauliMat
 
@@ -40,13 +42,13 @@ def vecToSu2LieAlg(inputVectorField):
 
     outputField += tf.expand_dims(
         tf.expand_dims(inputVectorField[:,:,:,0], -1), -1
-        ) * pauliMatrix(0)
-    outputField += tf.expand_dims(
-        tf.expand_dims(inputVectorField[:,:,:,1], -1), -1
         ) * pauliMatrix(1)
     outputField += tf.expand_dims(
-        tf.expand_dims(inputVectorField[:,:,:,2], -1), -1
+        tf.expand_dims(inputVectorField[:,:,:,1], -1), -1
         ) * pauliMatrix(2)
+    outputField += tf.expand_dims(
+        tf.expand_dims(inputVectorField[:,:,:,2], -1), -1
+        ) * pauliMatrix(3)
 
     return outputField
 
@@ -71,11 +73,11 @@ def su2ToVec(inputField):
 
     # This will clip values of +-pi to zero
     outputVec0 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
-        tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(0)))
-    outputVec1 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
         tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(1)))
-    outputVec2 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
+    outputVec1 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
         tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(2)))
+    outputVec2 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
+        tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(3)))
 
     return tf.stack([outputVec0, outputVec1, outputVec2], -1)
 

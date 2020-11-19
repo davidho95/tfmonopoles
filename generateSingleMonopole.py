@@ -4,7 +4,7 @@ Generates a single magnetic monopole of charge +1.
 
 import tensorflow as tf
 import numpy as np
-from GeorgiGlashowSu2Theory import GeorgiGlashowSu2Theory
+from theories.GeorgiGlashowSu2Theory import GeorgiGlashowSu2Theory
 import FieldTools
 import argparse
 

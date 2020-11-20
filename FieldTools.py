@@ -36,18 +36,18 @@ def randomSu2LieAlgField(N):
 # Lie algebra. Equivalent to contraction with a vector field of Pauli matrices 
 def vecToSu2LieAlg(inputVectorField):
     inputVectorField = tf.cast(inputVectorField, dtype=tf.complex128)
-    inputShape = tf.shape(inputVectorField)[0:3]
+    inputShape = tf.shape(inputVectorField)[0:-1]
     outputShape = tf.concat([inputShape, [2, 2]], 0)
     outputField = tf.zeros(outputShape, dtype=tf.complex128)
 
     outputField += tf.expand_dims(
-        tf.expand_dims(inputVectorField[:,:,:,0], -1), -1
+        tf.expand_dims(inputVectorField[...,0], -1), -1
         ) * pauliMatrix(1)
     outputField += tf.expand_dims(
-        tf.expand_dims(inputVectorField[:,:,:,1], -1), -1
+        tf.expand_dims(inputVectorField[...,1], -1), -1
         ) * pauliMatrix(2)
     outputField += tf.expand_dims(
-        tf.expand_dims(inputVectorField[:,:,:,2], -1), -1
+        tf.expand_dims(inputVectorField[...,2], -1), -1
         ) * pauliMatrix(3)
 
     return outputField
@@ -59,7 +59,7 @@ def vecToSu2(inputVectorField):
 
 # Converts a [..., 2, 2] SU(2) field to a [..., 3] SU(2) field
 def su2ToVec(inputField):
-    latShape = tf.shape(inputField)[0:3]
+    latShape = tf.shape(inputField)[0:-2]
     outputShape = tf.concat([latShape, [3]], 0)
 
     zeroTol = 1e-15
@@ -233,3 +233,20 @@ def innerProduct(field1, field2, tr=True, adj=False):
 
     return tf.math.abs(tf.reduce_sum(productField))
 
+# Linearly superpose two SU(2) gauge fields
+def linearSuperpose(gaugeField1, gaugeField2):
+    # Convert matrices to vectors
+    vec1 = su2ToVec(gaugeField1)
+    vec2 = su2ToVec(gaugeField2)
+
+    # Add the vectors and output the correspoding SU(2) field
+    outputVec = vec1 + vec2
+
+    outputField = vecToSu2(outputVec)
+
+    return outputField
+
+# # Generate a constant SU(2) magnetic field of given direction and number of flux
+# # quanta. Assumes unitary gauge with scalar field parallel to pauli3
+# def constantMagneticField(latShape, dir, numFluxQuanta):
+#     zeroMat = tf.zeros(latShape, dtype=tf.complex128)

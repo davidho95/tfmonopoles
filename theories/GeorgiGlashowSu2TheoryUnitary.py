@@ -41,7 +41,7 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
 
     # Shifts scalar field using user supplied BC's
     def shiftScalarField(self, scalarField, dir, sign):
-        shiftedField = tf.roll(scalarField, sign, dir)
+        shiftedField = tf.roll(scalarField, -sign, dir)
 
         pauliMatNum = self.boundaryConditions[dir]
 

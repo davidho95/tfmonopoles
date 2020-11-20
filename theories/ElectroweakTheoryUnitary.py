@@ -85,7 +85,7 @@ class ElectroweakTheory:
         # This is only valid in the unitary gauge, but it keeps the isospin
         # gradients symmetric which is good for convergence to the saddle
         for ii in range(numDims):
-            higgsFieldShifted = self.shiftHiggsField(higgsField, ii)
+            higgsFieldShifted = self.shiftHiggsField(higgsField, ii, +1)
             higgsMagnitudeShifted = tf.linalg.trace(self.higgsMagnitude(
                 tf.math.real(higgsFieldShifted))
                 )
@@ -116,10 +116,10 @@ class ElectroweakTheory:
     def isospinPlaquette(self, isospinField, dir1, dir2):
         plaquette = isospinField[:,:,:,dir1,:,:]
         plaquette = plaquette @\
-            self.shiftIsospinField(isospinField, dir1)[:,:,:,dir2,:,:]
+            self.shiftIsospinField(isospinField, dir1, +1)[:,:,:,dir2,:,:]
         plaquette = plaquette @\
             tf.linalg.adjoint(
-                self.shiftIsospinField(isospinField,dir2)[:,:,:,dir1,:,:]
+                self.shiftIsospinField(isospinField,dir2, +1)[:,:,:,dir1,:,:]
                 )
         plaquette = plaquette @ tf.linalg.adjoint(isospinField[:,:,:,dir2,:,:])
 
@@ -129,11 +129,11 @@ class ElectroweakTheory:
     def hyperchargePlaquette(self, hyperchargeField, dir1, dir2):
         plaquette = hyperchargeField[:,:,:,dir1,:,:]
         plaquette = plaquette @\
-            self.shiftHyperchargeField(hyperchargeField, dir1)[:,:,:,dir2,:,:]
+            self.shiftHyperchargeField(hyperchargeField, dir1, +1)[:,:,:,dir2,:,:]
         plaquette = plaquette @\
             tf.linalg.adjoint(
                 self.shiftHyperchargeField(
-                    hyperchargeField, dir2
+                    hyperchargeField, dir2, +1
                     )[:,:,:,dir1,:,:]
                 )
         plaquette = plaquette @\
@@ -157,13 +157,13 @@ class ElectroweakTheory:
     def emPlaquette(self, isospinField, hyperchargeField, dir1, dir2):
         emPlaquette = self.getEmLink(isospinField, hyperchargeField, dir1)
         emPlaquette = emPlaquette * self.getEmLink(
-            self.shiftIsospinField(isospinField, dir1), \
+            self.shiftIsospinField(isospinField, dir1, +1), \
                 self.shiftHyperchargeField(hyperchargeField, dir1), \
                 dir2
             )
         emPlaquette = emPlaquette * tf.math.conj(
             self.getEmLink(
-                self.shiftIsospinField(isospinField, dir2), \
+                self.shiftIsospinField(isospinField, dir2, +1), \
                 self.shiftHyperchargeField(hyperchargeField, dir2), \
                     dir1
                 )
@@ -190,16 +190,16 @@ class ElectroweakTheory:
         return magneticField
 
     # Shifts scalar field using periodic BCs
-    def shiftHiggsField(self, higgsField, dir):
-        shiftedField = tf.roll(higgsField, -1, dir)
+    def shiftHiggsField(self, higgsField, dir, sign):
+        shiftedField = tf.roll(higgsField, -sign, dir)
         return shiftedField
 
     # Shifts isospin field using periodic BCs
-    def shiftIsospinField(self, isospinField, dir):
-        shiftedField = tf.roll(isospinField, -1, dir)
+    def shiftIsospinField(self, isospinField, dir, sign):
+        shiftedField = tf.roll(isospinField, -sign, dir)
         return shiftedField
 
     # Shifts hypercharge field using periodic BCs
-    def shiftHyperchargeField(self, hyperchargeField, dir):
-        shiftedField = tf.roll(hyperchargeField, -1, dir)
+    def shiftHyperchargeField(self, hyperchargeField, dir, sign):
+        shiftedField = tf.roll(hyperchargeField, -sign, dir)
         return shiftedField

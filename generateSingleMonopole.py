@@ -41,8 +41,6 @@ z = tf.cast(tf.linspace(-(Nz-1)/2, (Nz-1)/2, Nz), tf.float64)
 
 X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 
-X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
-
 # Theory parameters
 params = {
     "vev" : args.vev,

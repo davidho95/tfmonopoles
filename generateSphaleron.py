@@ -62,7 +62,7 @@ def lossFn():
     return theory.energy(higgsField, isospinField, hyperchargeField)
 energy = lossFn()
 
-# Stopping criterion on RMS gradient
+# Stopping criterion on RSS gradient
 tol = args.tol
 
 # Just need to satisfy rmsGrad < rmsGradOld to start the loop
@@ -100,7 +100,7 @@ while rmsGrad < rmsGradOld and numSteps < maxNumSteps:
     if (numSteps % printIncrement == 0):
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
-        print("RMS gradient after " + str(numSteps) + " iterations: " +\
+        print("RSS gradient after " + str(numSteps) + " iterations: " +\
             str(rmsGrad.numpy()))
 
     # Perform the gradient descent step
@@ -115,7 +115,7 @@ while rmsGrad < rmsGradOld and numSteps < maxNumSteps:
 print("First gradient descent completed in " + str(numSteps) + " iterations")
 print("Energy reached: " + str(energy.numpy()))
 
-# Now minimise the RMS gradient summed over all sites
+# Now minimise the RSS gradient summed over all sites
 opt = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.95)
 numSteps = 0
 
@@ -167,7 +167,7 @@ while rmsGrad > tol and numSteps < maxNumSteps:
     if (numSteps % printIncrement == 0):
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
-        print("RMS gradient after " + str(numSteps) + " iterations: " +\
+        print("RSS gradient after " + str(numSteps) + " iterations: " +\
             str(rmsGrad.numpy()))
 
     # Perform the gradient descent step

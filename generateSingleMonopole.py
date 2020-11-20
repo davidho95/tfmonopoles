@@ -105,7 +105,7 @@ while rmsGrad > tol and numSteps < maxNumSteps:
     if (numSteps % printIncrement == 0):
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
-        print("RMS gradient after " + str(numSteps) + " iterations: " +\
+        print("RSS gradient after " + str(numSteps) + " iterations: " +\
             str(rmsGrad.numpy()))
 
     # Perform the gradient descent step

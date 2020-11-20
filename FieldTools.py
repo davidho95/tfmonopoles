@@ -71,7 +71,7 @@ def su2ToVec(inputField):
 
     vecNorm = tf.math.acos(cosVecNorm)
 
-    # This will clip values of +-pi to zero
+    # This will clip vec values of +-pi to zero
     outputVec0 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
         tf.math.imag(tf.linalg.trace(inputField @ pauliMatrix(1)))
     outputVec1 = 0.5 * tf.math.divide_no_nan(vecNorm, tf.math.sin(vecNorm)) *\
@@ -158,7 +158,7 @@ def projectToSu2LieAlg(scalarField):
     return projectedField
 
 # Project a [..., 2, 2] Matrix field to the SU(2) Lie group.
-# This has some array maniupulation in to avoid big overheads with calculating
+# This has some array manipulation in to avoid big overheads with calculating
 # determinants and inverses for 2 x 2 matrices using built-in functions
 def projectToSu2(gaugeField):
     projectedField = gaugeField
@@ -246,7 +246,39 @@ def linearSuperpose(gaugeField1, gaugeField2):
 
     return outputField
 
-# # Generate a constant SU(2) magnetic field of given direction and number of flux
-# # quanta. Assumes unitary gauge with scalar field parallel to pauli3
-# def constantMagneticField(latShape, dir, numFluxQuanta):
-#     zeroMat = tf.zeros(latShape, dtype=tf.complex128)
+# Generate a constant SU(2) magnetic field of given direction and number of flux
+# quanta. Assumes unitary gauge with scalar field parallel to pauli3
+def constantMagneticField(X, Y, Z, fieldDir, numFluxQuanta):
+    coords = [X,Y,Z]
+    latShape = tf.shape(X)
+    zeroMat = tf.zeros(latShape, dtype=tf.float64)
+    flux = 4*np.pi*tf.cast(numFluxQuanta, tf.float64)
+
+    dir1 = (fieldDir + 1) % 3
+    dir2 = (fieldDir + 2) % 3 
+
+    gaugeVecDir2 = 0.5*flux / (
+        tf.cast(latShape[dir2]*latShape[dir1], tf.float64)
+            ) * coords[dir1]
+
+    # Mask for sites on the dir1 boundary
+    dir1FaceShape = list(latShape)
+    dir1FaceShape[dir1] = 1
+    dir1Mask = tf.ones(dir1FaceShape, dtype=tf.float64)
+
+    paddings = [[0,0], [0,0], [0,0]]
+    paddings[dir1] = [0, latShape[dir1] - 1]
+    dir1Mask = tf.pad(dir1Mask, paddings, constant_values=0)
+
+    gaugeVecDir2 += dir1Mask*0.5*flux / tf.cast(latShape[dir2], tf.float64)
+
+    gaugeVecDir1 = zeroMat -\
+        0.5*dir1Mask*coords[dir2]*flux / tf.cast(latShape[dir2], tf.float64)
+
+    gaugeCpts = [zeroMat, zeroMat, zeroMat]
+    gaugeCpts[fieldDir] = vecToSu2(tf.stack([zeroMat, zeroMat, zeroMat], -1))
+    gaugeCpts[dir1] = vecToSu2(tf.stack([zeroMat, zeroMat, gaugeVecDir1], -1))
+    gaugeCpts[dir2] = vecToSu2(tf.stack([zeroMat, zeroMat, gaugeVecDir2], -1))
+
+
+    return tf.stack(gaugeCpts, -3)

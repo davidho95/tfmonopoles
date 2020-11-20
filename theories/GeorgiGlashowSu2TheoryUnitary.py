@@ -15,7 +15,7 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
 
     # Scalar potential
     def scalarPotential(self, scalarField):
-        energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
+        energyDensity = tf.zeros(tf.shape(scalarField)[0:-2], dtype=tf.float64)
 
         norms = tf.math.real(tf.linalg.trace(scalarField * scalarField))
 
@@ -50,11 +50,11 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
             return shiftedField
 
         # Create a mask to flip sign at the boundary
-        onesBatchShape = list(np.shape(scalarField)[0:3])
+        onesBatchShape = list(np.shape(scalarField)[0:-2])
         onesBatchShape[dir] -= 1
         onesBatchShape = tf.concat([onesBatchShape, [1,1]], 0)
 
-        minusOnesBatchShape = list(np.shape(scalarField)[0:3])
+        minusOnesBatchShape = list(np.shape(scalarField)[0:-2])
         minusOnesBatchShape[dir] = 1
         minusOnesBatchShape = tf.concat([minusOnesBatchShape, [1,1]], 0)
 

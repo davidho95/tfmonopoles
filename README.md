@@ -27,7 +27,7 @@ Saddle point finding is much more difficult than minimising, and accordingly thi
 The optimised Higgs, isospin and hypercharge fields are printed to npy files for analysis.
 
 ## Notes
-These calculations are not suitable for GPU optimisation, as the bulk of the computation is batch multiplication of small (2 x 2) matrices. I find on testing that CPU operations are faster than GPU for all batch sizes that fit in GPU memory.
+Currently these calculations cannot use GPU optimisation, as tensorflow does have support for complex numbers on GPUs (see relevant issue [https://github.com/tensorflow/tensorflow/issues/44834](here)
 
 Tested on:
 - Python 3.8.5

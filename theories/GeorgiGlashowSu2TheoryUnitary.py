@@ -24,7 +24,7 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
 
     # Gauge covariant derivative
     def covDeriv(self, scalarField, gaugeField, dir):
-        scalarFieldShifted = self.shiftScalarField(scalarField, dir)
+        scalarFieldShifted = self.shiftScalarField(scalarField, dir, +1)
         lieAlgField = scalarField * FieldTools.pauliMatrix(3)
         lieAlgFieldShifted = scalarFieldShifted * FieldTools.pauliMatrix(3)
         covDeriv = gaugeField[:,:,:,dir,:,:] @ lieAlgFieldShifted @\
@@ -40,8 +40,8 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
         return u1Link
 
     # Shifts scalar field using user supplied BC's
-    def shiftScalarField(self, scalarField, dir):
-        shiftedField = tf.roll(scalarField, -1, dir)
+    def shiftScalarField(self, scalarField, dir, sign):
+        shiftedField = tf.roll(scalarField, sign, dir)
 
         pauliMatNum = self.boundaryConditions[dir]
 
@@ -49,20 +49,29 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
         if pauliMatNum != 3:
             return shiftedField
 
-        # Create a mask to flip sign at the boundary
-        onesBatchShape = list(np.shape(scalarField)[0:-2])
-        onesBatchShape[dir] -= 1
-        onesBatchShape = tf.concat([onesBatchShape, [1,1]], 0)
-
-        minusOnesBatchShape = list(np.shape(scalarField)[0:-2])
-        minusOnesBatchShape[dir] = 1
-        minusOnesBatchShape = tf.concat([minusOnesBatchShape, [1,1]], 0)
-
-        ones = tf.ones(onesBatchShape, dtype=tf.complex128)
-        minusOnes = -1.0*tf.ones(minusOnesBatchShape, dtype=tf.complex128)
-
-        boundaryMask = tf.concat([ones, minusOnes], dir)
+        latShape = tf.shape(scalarField)[0:-2]
+        boundaryMask = self.boundaryMask(latShape, dir, +1)
 
         shiftedField = boundaryMask * shiftedField
 
         return shiftedField
+
+    # Mask to flip sign at the boundary
+    def scalarBoundaryMask(self, latShape, dir, sign):
+        onesBatchShape = tf.concat([latShape, [1, 1]], 0)
+        onesBatchShape = tf.tensor_scatter_nd_update(
+            onesBatchShape, [[dir]], [onesBatchShape[dir] - 1]
+            )
+
+        minusOnesBatchShape = tf.concat([latShape, [1, 1]], 0)
+        minusOnesBatchShape = tf.tensor_scatter_nd_update(
+            minusOnesBatchShape, [[dir]], [1]
+            )
+
+        ones = tf.ones(onesBatchShape, dtype=tf.complex128)
+        minusOnes = -1.0*tf.ones(minusOnesBatchShape, dtype=tf.complex128)
+
+        if sign == +1:
+            boundaryMask = tf.concat([ones, minusOnes], dir)
+        else:
+            boundaryMask = tf.concat([minusOnes, ones], dir)

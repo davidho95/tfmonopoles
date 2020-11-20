@@ -78,10 +78,10 @@ class GeorgiGlashowSu2Theory:
     def plaquette(self, gaugeField, dir1, dir2):
         plaquette = gaugeField[:,:,:,dir1,:,:]
         plaquette = plaquette @\
-            self.shiftGaugeField(gaugeField, dir1)[:,:,:,dir2,:,:]
+            self.shiftGaugeField(gaugeField, dir1, +1)[:,:,:,dir2,:,:]
         plaquette = plaquette @ \
             tf.linalg.adjoint(
-                self.shiftGaugeField(gaugeField,dir2)[:,:,:,dir1,:,:]
+                self.shiftGaugeField(gaugeField, dir2, +1)[:,:,:,dir1,:,:]
                 )
         plaquette = plaquette @ tf.linalg.adjoint(gaugeField[:,:,:,dir2,:,:])
 
@@ -97,7 +97,7 @@ class GeorgiGlashowSu2Theory:
 
     # Gauge covariant derivative
     def covDeriv(self, scalarField, gaugeField, dir):
-        scalarFieldShifted = self.shiftScalarField(scalarField, dir)
+        scalarFieldShifted = self.shiftScalarField(scalarField, dir, +1)
         covDeriv = gaugeField[:,:,:,dir,:,:] @ scalarFieldShifted @\
             tf.linalg.adjoint(gaugeField[:,:,:,dir,:,:]) - scalarField
         return covDeriv
@@ -105,14 +105,14 @@ class GeorgiGlashowSu2Theory:
     # Projects out abelian subgroup of gauge field
     def u1Projector(self, scalarField):
         trScalarSq = tf.linalg.trace(scalarField @ scalarField)
-        latSize = tf.shape(trScalarSq)
+        latShape = tf.shape(trScalarSq)
 
         trScalarSq = tf.expand_dims(trScalarSq, -1)
         trScalarSq = tf.expand_dims(trScalarSq, -1)
 
         normalisedScalarField = tf.math.sqrt(2.0/trScalarSq) * scalarField
 
-        identity = tf.eye(2, batch_shape=latSize, dtype=tf.complex128) 
+        identity = tf.eye(2, batch_shape=latShape, dtype=tf.complex128) 
 
         u1Projector = 0.5*(identity + normalisedScalarField)
 
@@ -121,8 +121,9 @@ class GeorgiGlashowSu2Theory:
     # Projects out abelian subgroup of gauge field
     def getU1Link(self, gaugeField, scalarField, dir):
         projector = self.u1Projector(scalarField)
-        projectorShifted = self.u1Projector(self.shiftScalarField(scalarField,\
-            dir))
+        projectorShifted = self.u1Projector(
+            self.shiftScalarField(scalarField, dir, +1)
+            )
 
         u1Link = projector @ gaugeField[:,:,:,dir,:,:] @ projectorShifted
 
@@ -132,13 +133,13 @@ class GeorgiGlashowSu2Theory:
     def u1Plaquette(self, gaugeField, scalarField, dir1, dir2):
         u1Plaquette = self.getU1Link(gaugeField, scalarField, dir1)
         u1Plaquette = u1Plaquette @ self.getU1Link(
-            self.shiftGaugeField(gaugeField, dir1), \
-                self.shiftScalarField(scalarField, dir1), dir2
+            self.shiftGaugeField(gaugeField, dir1, +1), \
+                self.shiftScalarField(scalarField, dir1, +1), dir2
             )
         u1Plaquette = u1Plaquette @ tf.linalg.adjoint(
             self.getU1Link(
-                self.shiftGaugeField(gaugeField, dir2),\
-                    self.shiftScalarField(scalarField, dir2), dir1
+                self.shiftGaugeField(gaugeField, dir2, +1),\
+                    self.shiftScalarField(scalarField, dir2, +1), dir1
                 )
             )
         u1Plaquette = u1Plaquette @ tf.linalg.adjoint(
@@ -160,62 +161,34 @@ class GeorgiGlashowSu2Theory:
         return magneticField
 
     # Shifts scalar field using supplied BC's
-    def shiftScalarField(self, scalarField, dir):
-        shiftedField = tf.roll(scalarField, -1, dir)
+    def shiftScalarField(self, scalarField, dir, sign):
+        shiftedField = tf.roll(scalarField, sign, dir)
 
         pauliMatNum = self.boundaryConditions[dir]
 
         if pauliMatNum == 0:
             return shiftedField
 
-        # Create a mask to pre- and post-multiply the field, with nonidentity
-        # values at the boundary 
-        identityBatchShape = list(np.shape(scalarField)[0:-2])
-        identityBatchShape[dir] -= 1
-
-        complementaryBatchShape = list(np.shape(scalarField)[0:-2])
-        complementaryBatchShape[dir] = 1
-
-        identities = tf.eye(
-            2, batch_shape=identityBatchShape, dtype=tf.complex128
-            )
-        pauliMatrices = 1j*tf.eye(2, batch_shape=complementaryBatchShape,\
-            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
-
-        # Concatenating identities with pauli matrices gives a tensor the same
-        # size as the input
-        boundaryMask = tf.concat([identities, pauliMatrices], dir)
+        # Apply boundary conditions
+        latShape = tf.shape(scalarField)[0:-2]
+        boundaryMask = self.scalarBoundaryMask(latShape, dir, sign)
 
         shiftedField = boundaryMask @ shiftedField @ boundaryMask
 
         return shiftedField
 
     # Shifts gauge field using supplied BC's
-    def shiftGaugeField(self, gaugeField, dir):
-        shiftedField = tf.roll(gaugeField, -1, dir)
+    def shiftGaugeField(self, gaugeField, dir, sign):
+        shiftedField = tf.roll(gaugeField, sign, dir)
 
         pauliMatNum = self.boundaryConditions[dir]
 
         if pauliMatNum == 0:
             return shiftedField
 
-        # Create a mask to pre- and post-multiply the field, with nonidentity
-        # values at the boundary 
-        identityBatchShape = list(np.shape(gaugeField)[0:-2])
-        identityBatchShape[dir] -= 1
-
-        complementaryBatchShape = list(np.shape(gaugeField)[0:-2])
-        complementaryBatchShape[dir] = 1
-
-        identities = tf.eye(
-            2, batch_shape=identityBatchShape, dtype=tf.complex128
-            )
-        pauliMatrices = tf.eye(2, batch_shape=complementaryBatchShape,\
-            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
-
-        # Concatenating identities with pauli matrices gives a tensor the same
-        # size as the input
-        boundaryMask = tf.concat([identities, pauliMatrices], dir)
+        # Apply boundary conditions
+        latShape = tf.shape(gaugeField)[0:-2]
+        boundaryMask = self.gaugeBoundaryMask(latShape, dir, sign)
 
         shiftedField = boundaryMask @ shiftedField @ boundaryMask
 
@@ -236,3 +209,63 @@ class GeorgiGlashowSu2Theory:
         mask = tf.pad(mask, paddings, constant_values=1)
 
         return plaquette * mask
+
+    # Create a mask to pre- and post-multiply the scalar field, in order to apply the 
+    # boundary conditions 
+    def scalarBoundaryMask(self, latShape, dir, sign):
+        pauliMatNum = self.boundaryConditions[dir]
+
+        identityBatchShape = latShape
+        identityBatchShape = tf.tensor_scatter_nd_update(
+            identityBatchShape, [[dir]], [identityBatchShape[dir] - 1]
+            )
+
+        complementaryBatchShape = latShape
+        complementaryBatchShape = tf.tensor_scatter_nd_update(
+            complementaryBatchShape, [[dir]], [1]
+            )
+
+        identities = tf.eye(
+            2, batch_shape=identityBatchShape, dtype=tf.complex128
+            )
+        pauliMatrices = 1j*tf.eye(2, batch_shape=complementaryBatchShape,\
+            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
+
+        # Concatenating identities with pauli matrices gives a tensor the same
+        # size as the input
+        if sign == +1:
+            boundaryMask = tf.concat([identities, pauliMatrices], dir)
+        else:
+            boundaryMask = tf.concat([pauliMatrices, identities], dir)
+
+        return boundaryMask
+
+    # Create a mask to pre- and post-multiply the scalar field, in order to apply the 
+    # boundary conditions 
+    def gaugeBoundaryMask(self, latShape, dir, sign):
+        pauliMatNum = self.boundaryConditions[dir]
+
+        identityBatchShape = tf.concat([latShape], 0)
+        identityBatchShape = tf.tensor_scatter_nd_update(
+            identityBatchShape, [[dir]], [identityBatchShape[dir] - 1]
+            )
+
+        complementaryBatchShape = tf.concat([latShape], 0)
+        complementaryBatchShape = tf.tensor_scatter_nd_update(
+            complementaryBatchShape, [[dir]], [1]
+            )
+
+        identities = tf.eye(
+            2, batch_shape=identityBatchShape, dtype=tf.complex128
+            )
+        pauliMatrices = tf.eye(2, batch_shape=complementaryBatchShape,\
+            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
+
+        # Concatenating identities with pauli matrices gives a tensor the same
+        # size as the input
+        if sign == +1:
+            boundaryMask = tf.concat([identities, pauliMatrices], dir)
+        else:
+            boundaryMask = tf.concat([pauliMatrices, identities], dir)
+
+        return boundaryMask

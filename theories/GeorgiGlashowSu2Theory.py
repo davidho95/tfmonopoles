@@ -36,7 +36,7 @@ class GeorgiGlashowSu2Theory:
         return tf.math.reduce_sum(self.energyDensity(scalarField, gaugeField))
 
     def energyDensity(self, scalarField, gaugeField):
-        energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
+        energyDensity = tf.zeros(tf.shape(scalarField)[0:-2], dtype=tf.float64)
 
         energyDensity += self.ymTerm(gaugeField)
         energyDensity += self.covDerivTerm(scalarField, gaugeField)
@@ -59,7 +59,7 @@ class GeorgiGlashowSu2Theory:
 
     # Gauge kinetic term for the scalar field
     def covDerivTerm(self, scalarField, gaugeField):
-        energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
+        energyDensity = tf.zeros(tf.shape(scalarField)[0:-2], dtype=tf.float64)
         numDims = 3
         for ii in range(numDims):
             covDeriv = self.covDeriv(scalarField, gaugeField, ii)
@@ -68,7 +68,7 @@ class GeorgiGlashowSu2Theory:
 
     # Scalar potential
     def scalarPotential(self, scalarField):
-        energyDensity = tf.zeros(tf.shape(scalarField)[0:3], dtype=tf.float64)
+        energyDensity = tf.zeros(tf.shape(scalarField)[0:-2], dtype=tf.float64)
 
         norms = tf.math.real(tf.linalg.trace(scalarField @ scalarField))
         energyDensity += self.selfCoupling * (self.vev**2 - norms)**2
@@ -148,6 +148,7 @@ class GeorgiGlashowSu2Theory:
         return u1Plaquette
 
     def magneticField(self, gaugeField, scalarField, dir):
+        # This is out by +-pi/g along the 't Hooft line
         dir1 = (dir + 1) % 3
         dir2 = (dir + 2) % 3
 
@@ -169,10 +170,10 @@ class GeorgiGlashowSu2Theory:
 
         # Create a mask to pre- and post-multiply the field, with nonidentity
         # values at the boundary 
-        identityBatchShape = list(np.shape(scalarField)[0:3])
+        identityBatchShape = list(np.shape(scalarField)[0:-2])
         identityBatchShape[dir] -= 1
 
-        complementaryBatchShape = list(np.shape(scalarField)[0:3])
+        complementaryBatchShape = list(np.shape(scalarField)[0:-2])
         complementaryBatchShape[dir] = 1
 
         identities = tf.eye(
@@ -200,10 +201,10 @@ class GeorgiGlashowSu2Theory:
 
         # Create a mask to pre- and post-multiply the field, with nonidentity
         # values at the boundary 
-        identityBatchShape = list(np.shape(gaugeField)[0:4])
+        identityBatchShape = list(np.shape(gaugeField)[0:-2])
         identityBatchShape[dir] -= 1
 
-        complementaryBatchShape = list(np.shape(gaugeField)[0:4])
+        complementaryBatchShape = list(np.shape(gaugeField)[0:-2])
         complementaryBatchShape[dir] = 1
 
         identities = tf.eye(

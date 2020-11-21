@@ -27,7 +27,7 @@ Saddle point finding is much more difficult than minimising, and accordingly thi
 The optimised Higgs, isospin and hypercharge fields are printed to npy files for analysis.
 
 ## Notes
-Currently these calculations cannot use GPU optimisation, as tensorflow does have support for complex numbers on GPUs (see relevant issue [here](https://github.com/tensorflow/tensorflow/issues/44834))
+Currently these calculations cannot use GPU optimisation, as tensorflow does have support for complex numbers on GPUs (see relevant issue [here](https://github.com/tensorflow/tensorflow/issues/44834)). A quick way to ensure the program is run on a CPU if GPUs are available is to set the environment variable `CUDA_VISIBLE_DEVICES=-1`
 
 Tested on:
 - Python 3.8.5

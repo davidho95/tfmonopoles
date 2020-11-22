@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from theories.ElectroweakTheoryUnitary import ElectroweakTheory
+from theories import ElectroweakTheoryUnitary
 import FieldTools
 import argparse
 
@@ -39,7 +39,7 @@ z = tf.cast(tf.linspace(-(N-1)/2, (N-1)/2, N), tf.float64)
 
 X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 
-theory = ElectroweakTheory(params)
+theory = ElectroweakTheoryUnitary(params)
 
 inputPath = args.inputPath
 if inputPath == "":

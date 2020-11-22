@@ -7,14 +7,15 @@ import numpy as np
 
 # Generate Pauli matrices, using convention that 0th pauli matrix is the identity
 def pauliMatrix(cpt):
-    if (cpt == 0):
+    if cpt == 0:
         pauliMat = tf.constant([[1, 0], [0, 1]], dtype=tf.complex128)
-    if (cpt == 1):
+    elif cpt == 1:
         pauliMat = tf.constant([[0, 1], [1, 0]], dtype=tf.complex128)
-    if (cpt == 2):
+    elif cpt == 2:
         pauliMat = tf.constant([[0j, -1j], [1j, 0j]], dtype=tf.complex128)
-    if (cpt == 3):
+    elif cpt == 3:
         pauliMat = tf.constant([[1, 0], [0, -1]], dtype=tf.complex128)
+
     return pauliMat
 
 # Generate an [N, N, N] field taking random values in the SU(2) Lie algebra.

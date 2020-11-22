@@ -1,12 +1,13 @@
-'''
+"""
 Class for calculating field properties in Electroweak theory
-'''
+in the unitary gauge
+"""
 
 import tensorflow as tf
 import numpy as np
 import FieldTools
 
-class ElectroweakTheory:
+class ElectroweakTheoryUnitary:
     # Params is a dictionary with keys "vev", "selfCoupling", "gaugeCoupling",
     # and "mixingAngle"
     def __init__(self, params):

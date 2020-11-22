@@ -1,12 +1,14 @@
 """
 Generates a single magnetic monopole of charge +1.
 """
-
 import tensorflow as tf
 import numpy as np
-from theories.GeorgiGlashowSu2Theory import GeorgiGlashowSu2Theory
+from theories import GeorgiGlashowSu2Theory
 import FieldTools
 import argparse
+import gc
+
+# tf.profiler.experimental.start("tensorboardlogs")
 
 parser = argparse.ArgumentParser(description="Generate a single monopole")
 parser.add_argument("--size", "-s", default=[16], type=int, nargs="*")
@@ -14,7 +16,7 @@ parser.add_argument("--vev", "-v", default=1.0, type=float)
 parser.add_argument("--gaugeCoupling", "-g", default=1.0, type=float)
 parser.add_argument("--selfCoupling", "-l", default=0.5, type=float)
 parser.add_argument("--tol", "-t", default=1e-3, type=float)
-parser.add_argument("--outputPath", "-o", default=".", type=str)
+parser.add_argument("--outputPath", "-o", default="", type=str)
 parser.add_argument("--inputPath", "-i", default="", type=str)
 parser.add_argument("--numCores", "-n", default=0, type=int)
 
@@ -45,35 +47,36 @@ X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 params = {
     "vev" : args.vev,
     "selfCoupling" : args.selfCoupling,
-    "gaugeCoupling" : args.gaugeCoupling
+    "gaugeCoupling" : args.gaugeCoupling,
 }
 
 
 # Set up the initial scalar and gauge fields
 inputPath = args.inputPath
 if inputPath == "":
-    scalarMat, gaugeMat = FieldTools.setMonopoleInitialConditions(
+    scalarField, gaugeField = FieldTools.setMonopoleInitialConditions(
         X, Y, Z, params["vev"]
         )
 else:
-    scalarMat = np.load(inputPath + "/scalarField.npy")
-    gaugeMat = np.load(inputPath + "/gaugeField.npy")
+    scalarField = np.load(inputPath + "/scalarField.npy")
+    gaugeField = np.load(inputPath + "/gaugeField.npy")
 
 # Convert to tf Variables so gradients can be tracked
-scalarField = tf.Variable(scalarMat, trainable=True)
-gaugeField = tf.Variable(gaugeMat, trainable=True)
+scalarFieldVar = tf.Variable(scalarField, trainable=True)
+gaugeFieldVar = tf.Variable(gaugeField, trainable=True)
 
 theory = GeorgiGlashowSu2Theory(params)
 
 @tf.function
 def lossFn():
-    return theory.energy(scalarField, gaugeField)
+    return theory.energy(scalarFieldVar, gaugeFieldVar)
 energy = lossFn()
 
 # Stopping criterion on the maximum value of the gradient
 tol = args.tol
 
 # Set up optimiser
+# Learning rate is a bit heuristic but works quite well
 opt = tf.keras.optimizers.SGD(
     learning_rate=0.01*args.gaugeCoupling*args.vev, momentum=0.5
     )
@@ -87,14 +90,14 @@ while rmsGrad > tol and numSteps < maxNumSteps:
     with tf.GradientTape() as tape:
         energy = lossFn()
 
-    vars = [scalarField, gaugeField]
+    vars = [scalarFieldVar, gaugeFieldVar]
 
     # Compute the gradients using automatic differentiation
     grads = tape.gradient(energy, vars)
 
     # Postprocess the gauge field gradients so they point in the tangent space 
     # to SU(2)
-    grads[1] = FieldTools.projectSu2Gradients(grads[1], gaugeField)
+    grads[1] = FieldTools.projectSu2Gradients(grads[1], gaugeFieldVar)
 
     # Compute max gradient for stopping criterion
     gradSq = FieldTools.innerProduct(grads[0], grads[0], tr=True)
@@ -113,18 +116,22 @@ while rmsGrad > tol and numSteps < maxNumSteps:
     numSteps += 1
 
     # Postprocess the fields to avoid drift away from SU(2)/its Lie algebra
-    scalarField.assign(FieldTools.projectToSu2LieAlg(scalarField))
-    gaugeField.assign(FieldTools.projectToSu2(gaugeField))
+    scalarFieldVar.assign(FieldTools.projectToSu2LieAlg(scalarFieldVar))
+    gaugeFieldVar.assign(FieldTools.projectToSu2(gaugeFieldVar))
+
 
 print("Gradient descent finished in " + str(numSteps) + " iterations")
 print("Final energy: " + str(energy.numpy()))
 
 # Save fields as .npy files for plotting and further analysis
 outputPath = args.outputPath
-np.save(outputPath + "/X", X.numpy())
-np.save(outputPath + "/Y", Y.numpy())
-np.save(outputPath + "/Z", Z.numpy())
-np.save(outputPath + "/scalarField", scalarField.numpy())
-np.save(outputPath + "/gaugeField", gaugeField.numpy())
-np.save(outputPath + "/params", params)
 
+if outputPath != "":
+    np.save(outputPath + "/X", X.numpy())
+    np.save(outputPath + "/Y", Y.numpy())
+    np.save(outputPath + "/Z", Z.numpy())
+    np.save(outputPath + "/scalarField", scalarFieldVar.numpy())
+    np.save(outputPath + "/gaugeField", gaugeFieldVar.numpy())
+    np.save(outputPath + "/params", params)
+
+# tf.profiler.experimental.stop()

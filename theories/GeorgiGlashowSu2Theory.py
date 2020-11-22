@@ -3,7 +3,6 @@ Class for calculating field properties in Georgi-Glashow Su(2) Theory
 '''
 
 import tensorflow as tf
-import numpy as np
 import FieldTools
 
 class GeorgiGlashowSu2Theory:

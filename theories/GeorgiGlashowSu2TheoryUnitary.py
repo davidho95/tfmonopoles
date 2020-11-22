@@ -6,7 +6,7 @@ passed as a complex128 tensor with shape [...,1,1]
 
 import tensorflow as tf
 import numpy as np
-from theories.GeorgiGlashowSu2Theory import GeorgiGlashowSu2Theory
+from theories import GeorgiGlashowSu2Theory
 import FieldTools
 
 class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):

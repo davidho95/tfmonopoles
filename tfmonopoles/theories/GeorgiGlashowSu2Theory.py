@@ -238,8 +238,8 @@ class GeorgiGlashowSu2Theory:
 
         return boundaryMask
 
-    # Create a mask to pre- and post-multiply the scalar field, in order to apply the 
-    # boundary conditions 
+    # Create a mask to pre- and post-multiply the scalar field, in order to
+    # apply the boundary conditions 
     def gaugeBoundaryMask(self, latShape, dir, sign):
         pauliMatNum = self.boundaryConditions[dir]
 
@@ -267,3 +267,12 @@ class GeorgiGlashowSu2Theory:
             boundaryMask = tf.concat([pauliMatrices, identities], dir)
 
         return boundaryMask
+
+    # Postprocess the gauge gradients so they obey the constraints on the fields
+    # Expects grad to be the output of tf.GradientTape.gradient()
+    # Expects fields to be a list [scalarField, gaugeField]
+    def processGradients(self, grads, fields):
+        processedGrads = grads
+        processedGrads[1] = FieldTools.projectSu2Gradients(grads[1], fields[1])
+
+        return processedGrads

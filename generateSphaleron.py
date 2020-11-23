@@ -86,8 +86,7 @@ while rssGrad < rssGradOld and numSteps < maxNumSteps:
     grads = tape.gradient(energy, vars)
 
     # Postprocess the gauge field gradients
-    grads[1] = FieldTools.projectSu2Gradients(grads[1], isospinField)
-    grads[2] = FieldTools.projectU1Gradients(grads[2], hyperchargeField)
+    grads = theory.processGradients(grads, vars)
 
     # Compute rms gradient for stopping criterion
     gradSq = FieldTools.innerProduct(grads[0], grads[0], adj=True)
@@ -130,8 +129,7 @@ while rssGrad > tol and numSteps < maxNumSteps:
         grads = innerTape.gradient(energy, vars)
 
         # Postprocess the gauge field gradients
-        grads[1] = FieldTools.projectSu2Gradients(grads[1], isospinField)
-        grads[2] = FieldTools.projectU1Gradients(grads[2], hyperchargeField)
+        grads = theory.processGradients(grads, vars)
 
         # Compute squared gradients (note that as this is being tracked we can't
         # use the innerProduct function due to passing by value)

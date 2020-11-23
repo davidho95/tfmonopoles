@@ -6,9 +6,6 @@ import numpy as np
 from tfmonopoles.theories import GeorgiGlashowSu2Theory
 from tfmonopoles import FieldTools
 import argparse
-import gc
-
-# tf.profiler.experimental.start("tensorboardlogs")
 
 parser = argparse.ArgumentParser(description="Generate a single monopole")
 parser.add_argument("--size", "-s", default=[16], type=int, nargs="*")
@@ -82,7 +79,7 @@ opt = tf.keras.optimizers.SGD(
     )
 numSteps = 0
 rssGrad = 1e6 # Initial value; a big number
-maxNumSteps = 10000
+maxNumSteps = 100
 printIncrement = 10
 
 while rssGrad > tol and numSteps < maxNumSteps:
@@ -97,7 +94,7 @@ while rssGrad > tol and numSteps < maxNumSteps:
 
     # Postprocess the gauge field gradients so they point in the tangent space 
     # to SU(2)
-    grads[1] = FieldTools.projectSu2Gradients(grads[1], gaugeFieldVar)
+    grads = theory.processGradients(grads, vars)
 
     # Compute max gradient for stopping criterion
     gradSq = FieldTools.innerProduct(grads[0], grads[0], tr=True)
@@ -133,5 +130,3 @@ if outputPath != "":
     np.save(outputPath + "/scalarField", scalarFieldVar.numpy())
     np.save(outputPath + "/gaugeField", gaugeFieldVar.numpy())
     np.save(outputPath + "/params", params)
-
-# tf.profiler.experimental.stop()

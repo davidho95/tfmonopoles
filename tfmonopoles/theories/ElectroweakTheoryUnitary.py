@@ -204,3 +204,13 @@ class ElectroweakTheoryUnitary:
     def shiftHyperchargeField(self, hyperchargeField, dir, sign):
         shiftedField = tf.roll(hyperchargeField, -sign, dir)
         return shiftedField
+
+    # Postprocess the gauge gradients so they obey the constraints on the fields
+    # Expects grad to be the output of tf.GradientTape.gradient()
+    # Expects fields to be a list [higgsField, isospinField, hyperChargeField]
+    def processGradients(self, grads, fields):
+        processedGrads = grads
+        processedGrads[1] = FieldTools.projectSu2Gradients(grads[1], fields[1])
+        processedGrads[2] = FieldTools.projectU1Gradients(grads[2], fields[2])
+
+        return processedGrads

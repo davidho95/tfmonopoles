@@ -1,3 +1,0 @@
-from theories.GeorgiGlashowSu2Theory import GeorgiGlashowSu2Theory
-from theories.GeorgiGlashowSu2TheoryUnitary import GeorgiGlashowSu2TheoryUnitary
-from theories.ElectroweakTheoryUnitary import ElectroweakTheoryUnitary

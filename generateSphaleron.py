@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
-from theories import ElectroweakTheoryUnitary
-import FieldTools
+from tfmonopoles.theories import ElectroweakTheoryUnitary
+from tfmonopoles import FieldTools
 import argparse
 
 parser = argparse.ArgumentParser(description="Generate an Electroweak sphaleron")
@@ -65,9 +65,9 @@ energy = lossFn()
 # Stopping criterion on RSS gradient
 tol = args.tol
 
-# Just need to satisfy rmsGrad < rmsGradOld to start the loop
-rmsGrad = 1e6
-rmsGradOld = 1e7
+# Just need to satisfy rssGrad < rssGradOld to start the loop
+rssGrad = 1e6
+rssGradOld = 1e7
 
 numSteps = 0
 maxNumSteps = 1000000
@@ -75,7 +75,7 @@ printIncrement = 10
 
 # First perform standard gradient descent to get close to the saddle point
 opt = tf.keras.optimizers.SGD(learning_rate=0.02*args.gaugeCoupling*args.vev)
-while rmsGrad < rmsGradOld and numSteps < maxNumSteps:
+while rssGrad < rssGradOld and numSteps < maxNumSteps:
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as tape:
         energy = lossFn()
@@ -94,14 +94,14 @@ while rmsGrad < rmsGradOld and numSteps < maxNumSteps:
     gradSq += FieldTools.innerProduct(grads[1], grads[1], tr=True, adj=True)
     gradSq += FieldTools.innerProduct(grads[1], grads[1], adj=True)
 
-    rmsGradOld = rmsGrad
-    rmsGrad = tf.math.sqrt(gradSq)
+    rssGradOld = rssGrad
+    rssGrad = tf.math.sqrt(gradSq)
 
     if (numSteps % printIncrement == 0):
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
         print("RSS gradient after " + str(numSteps) + " iterations: " +\
-            str(rmsGrad.numpy()))
+            str(rssGrad.numpy()))
 
     # Perform the gradient descent step
     opt.apply_gradients(zip(grads, vars))
@@ -119,7 +119,7 @@ print("Energy reached: " + str(energy.numpy()))
 opt = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.95)
 numSteps = 0
 
-while rmsGrad > tol and numSteps < maxNumSteps:
+while rssGrad > tol and numSteps < maxNumSteps:
     vars = [higgsField, isospinField, hyperchargeField]
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as outterTape:
@@ -146,7 +146,7 @@ while rmsGrad > tol and numSteps < maxNumSteps:
         gradSq += tf.math.real(
             tf.reduce_sum(tf.linalg.adjoint(grads[2]) @ grads[2])
             )
-        rmsGrad = tf.sqrt(gradSq)
+        rssGrad = tf.sqrt(gradSq)
 
     # Compute the second-level gradients (gradient of gradient squared)
     ggrads = outterTape.gradient(gradSq, vars)
@@ -168,7 +168,7 @@ while rmsGrad > tol and numSteps < maxNumSteps:
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
         print("RSS gradient after " + str(numSteps) + " iterations: " +\
-            str(rmsGrad.numpy()))
+            str(rssGrad.numpy()))
 
     # Perform the gradient descent step
     opt.apply_gradients(zip(ggrads, vars))

@@ -1,8 +1,8 @@
-'''
+"""
 Georgi-Glashow theory restricted to the unitary gauge, with the scalar field
 parallel to the third Pauli matrix. Scalar field is now an array of magnitudes,
 passed as a complex128 tensor with shape [...,1,1]
-'''
+"""
 
 import tensorflow as tf
 import numpy as np

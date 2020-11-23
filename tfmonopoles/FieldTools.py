@@ -1,6 +1,6 @@
-'''
+"""
 Some tools to manipulate SU(2) gauge and adjoint scalar fields
-'''
+"""
 
 import tensorflow as tf
 import numpy as np

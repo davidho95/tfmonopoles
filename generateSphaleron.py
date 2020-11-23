@@ -91,7 +91,7 @@ while rssGrad < rssGradOld and numSteps < maxNumSteps:
     # Compute rms gradient for stopping criterion
     gradSq = FieldTools.innerProduct(grads[0], grads[0], adj=True)
     gradSq += FieldTools.innerProduct(grads[1], grads[1], tr=True, adj=True)
-    gradSq += FieldTools.innerProduct(grads[1], grads[1], adj=True)
+    gradSq += FieldTools.innerProduct(grads[2], grads[2], tr=False, adj=True)
 
     rssGradOld = rssGrad
     rssGrad = tf.math.sqrt(gradSq)
@@ -148,8 +148,7 @@ while rssGrad > tol and numSteps < maxNumSteps:
 
     # Compute the second-level gradients (gradient of gradient squared)
     ggrads = outterTape.gradient(gradSq, vars)
-    ggrads[1] = FieldTools.projectSu2Gradients(ggrads[1], isospinField)
-    ggrads[2] = FieldTools.projectU1Gradients(ggrads[2], hyperchargeField)
+    ggrads = theory.processGradients(ggrads, vars)
 
     # Normalise second-level gradients on a field-by-field basis
     higgsGGradSq = FieldTools.innerProduct(ggrads[0], ggrads[0], adj=True)

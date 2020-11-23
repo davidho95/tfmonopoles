@@ -147,14 +147,14 @@ def projectToSu2LieAlg(scalarField):
     projectedField = scalarField
 
     # Make antihermitian
-    projectedField.assign(0.5*(projectedField + \
+    projectedField = (0.5*(projectedField + \
         tf.linalg.adjoint(projectedField)))
 
     # Make traceless
     trace = tf.linalg.trace(projectedField)
     trace = tf.expand_dims(trace, -1)
     trace = tf.expand_dims(trace, -1)
-    projectedField.assign(projectedField - 0.5*trace)
+    projectedField = (projectedField - 0.5*trace)
 
     return projectedField
 
@@ -192,7 +192,7 @@ def projectToU1(gaugeField):
 
     # Normalise
     magnitude = tf.abs(gaugeField)
-    projectedField.assign(projectedField / tf.cast(magnitude, tf.complex128))
+    projectedField = (projectedField / tf.cast(magnitude, tf.complex128))
 
     return projectedField
 

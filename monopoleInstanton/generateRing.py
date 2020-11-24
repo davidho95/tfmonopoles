@@ -3,6 +3,9 @@ Generates a monopole ring from a pair input (in the unitary
 gauge). In order to converge to a nontrivial solution, the vev and gauge coupling
 must be set so monopoles do not move under gradient flow: vg ~ 1. Optionally, an
 external magnetic field may be applied using --externalField.
+
+On small lattices, a nonzero external field is probably required to avoid
+converging to the vacuum
 """
 
 
@@ -11,10 +14,8 @@ import numpy as np
 from tfmonopoles.theories import GeorgiGlashowRadialTheory
 from tfmonopoles import FieldTools
 import argparse
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
-parser = argparse.ArgumentParser(description="Generate a monopole-antimonopole pair")
+parser = argparse.ArgumentParser(description="Generate a monopole ring")
 parser.add_argument("--vev", "-v", default=1.0, type=float)
 parser.add_argument("--gaugeCoupling", "-g", default=1.0, type=float)
 parser.add_argument("--selfCoupling", "-l", default=0.5, type=float)
@@ -39,20 +40,20 @@ inputScalarField = np.load(inputPath + "/scalarField.npy", allow_pickle=True)
 inputGaugeField = np.load(inputPath + "/gaugeField.npy", allow_pickle=True)
 inputParams = np.load(inputPath + "/params.npy", allow_pickle=True).item()
 
+# Halve the lattice and field size
 inputShape = tf.shape(inputX)
 R = inputX[int(inputShape[0])//2:,...]
 Y = inputY[int(inputShape[0])//2:,...]
 Z = inputZ[int(inputShape[0])//2:,...]
+latShape = tf.shape(R)
 
 scalarField = inputScalarField[int(inputShape[0])//2:,...]
 gaugeField = inputGaugeField[int(inputShape[0])//2:,...]
 
+# Add magnetic field if required
 numFluxQuanta = args.externalField
-
 magField = FieldTools.constantMagneticField(R, Y, Z, 0, numFluxQuanta)
 gaugeField = FieldTools.linearSuperpose(gaugeField, magField)
-
-latShape = tf.shape(R)
 
 # Theory parameters
 params = {
@@ -74,7 +75,7 @@ energy = lossFn()
 
 tf.print(energy)
 
-# Stopping criterion on the maximum value of the gradient
+# Stopping criterion on RSS of the gradient
 tol = args.tol
 
 # Set up optimiser
@@ -97,8 +98,7 @@ while rmsGrad > tol and numSteps < maxNumSteps:
 
     # Postprocess the gauge field gradients so they point in the tangent space 
     # to SU(2)
-    grads[0] = grads[0] / tf.cast(tf.reshape(R, tf.concat([latShape, [1, 1]], 0)), tf.complex128) / (2*np.pi)
-    grads[1] = FieldTools.projectSu2Gradients(grads[1], gaugeFieldVar) / tf.cast(tf.reshape(R, tf.concat([latShape, [1, 1, 1]], 0)), tf.complex128)  / (2*np.pi)
+    grads = theory.processGradients(grads, vars)
 
     # Compute max gradient for stopping criterion
     gradSq = FieldTools.innerProduct(grads[0], grads[0], tr=True)
@@ -125,10 +125,10 @@ print("Final energy: " + str(energy.numpy()))
 
 # Save fields as .npy files for plotting and further analysis
 outputPath = args.outputPath
-np.save(outputPath + "/R", R.numpy())
-np.save(outputPath + "/Y", Y.numpy())
-np.save(outputPath + "/Z", Z.numpy())
-np.save(outputPath + "/scalarField", scalarFieldVar.numpy())
-np.save(outputPath + "/gaugeField", gaugeFieldVar.numpy())
-np.save(outputPath + "/params", params)
-
+if outputPath != "":
+    np.save(outputPath + "/R", R.numpy())
+    np.save(outputPath + "/Y", Y.numpy())
+    np.save(outputPath + "/Z", Z.numpy())
+    np.save(outputPath + "/scalarField", scalarFieldVar.numpy())
+    np.save(outputPath + "/gaugeField", gaugeFieldVar.numpy())
+    np.save(outputPath + "/params", params)

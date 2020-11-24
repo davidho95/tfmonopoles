@@ -3,6 +3,7 @@ Class for calculating field properties in Georgi-Glashow Su(2) Theory
 """
 
 import tensorflow as tf
+import numpy as np
 from tfmonopoles import FieldTools
 
 class GeorgiGlashowSu2Theory:
@@ -147,16 +148,38 @@ class GeorgiGlashowSu2Theory:
         return u1Plaquette
 
     def magneticField(self, gaugeField, scalarField, dir):
-        # This is out by +-pi/g along the 't Hooft line
         dir1 = (dir + 1) % 3
         dir2 = (dir + 2) % 3
 
-        magneticField = 2.0/self.gaugeCoupling * tf.math.angle(
+        magneticField = tf.math.angle(
             tf.linalg.trace(
                 self.u1Plaquette(gaugeField, scalarField, dir1, dir2))
             )
 
-        return magneticField
+        if dir == 0:
+            # Fix values along the 't Hooft line
+            mask = tf.squeeze(self.tHooftLineMask(magneticField))
+
+            minusIndices = tf.where(
+                tf.math.logical_and(
+                    tf.math.equal(mask, -1), tf.math.less(magneticField, 0)
+                    )
+                )
+            plusIndices = tf.where(
+                tf.math.logical_and(
+                    tf.math.equal(mask, -1), tf.math.greater(magneticField, 0)
+                    )
+                )
+            minusUpdates = tf.gather_nd(magneticField, minusIndices) + np.pi
+            plusUpdates = tf.gather_nd(magneticField, plusIndices) - np.pi
+            magneticField = tf.tensor_scatter_nd_update(
+                magneticField, minusIndices, minusUpdates
+                )
+            magneticField = tf.tensor_scatter_nd_update(
+                magneticField, plusIndices, plusUpdates
+                )
+
+        return 2.0/self.gaugeCoupling * magneticField
 
     # Shifts scalar field using supplied BC's
     def shiftScalarField(self, scalarField, dir, sign):
@@ -195,16 +218,7 @@ class GeorgiGlashowSu2Theory:
     def flipPlaquette(self, plaquette):
         # Mask to flip plaquettes along a line in the x direction, giving a
         # 't Hooft line
-        latShape = tf.shape(plaquette)[0:3]
-
-        mask = -tf.ones([latShape[0], 1, 1, 1, 1], dtype=tf.complex128)
-
-        yPaddings = [latShape[1] // 2, latShape[1] - latShape[1] // 2 - 1]
-        zPaddings = [latShape[1] // 2, latShape[1] - latShape[1] // 2 - 1]
-
-        paddings = [[0,0], yPaddings, zPaddings, [0,0], [0,0]]
-
-        mask = tf.pad(mask, paddings, constant_values=1)
+        mask = self.tHooftLineMask(plaquette)
 
         return plaquette * mask
 
@@ -268,6 +282,21 @@ class GeorgiGlashowSu2Theory:
 
         return boundaryMask
 
+    # Mask of -1 values along a tHooft line with ones elsewhere to flip plaquettes
+    def tHooftLineMask(self, plaquette):
+        latShape = tf.shape(plaquette)[0:3]
+
+        mask = -tf.ones([latShape[0], 1, 1, 1, 1], dtype=tf.complex128)
+
+        yPaddings = [latShape[1] // 2, latShape[1] - latShape[1] // 2 - 1]
+        zPaddings = [latShape[1] // 2, latShape[1] - latShape[1] // 2 - 1]
+
+        paddings = [[0,0], yPaddings, zPaddings, [0,0], [0,0]]
+
+        mask = tf.pad(mask, paddings, constant_values=1)
+
+        return mask
+
     # Postprocess the gauge gradients so they obey the constraints on the fields
     # Expects grad to be the output of tf.GradientTape.gradient()
     # Expects fields to be a list [scalarField, gaugeField]
@@ -276,3 +305,4 @@ class GeorgiGlashowSu2Theory:
         processedGrads[1] = FieldTools.projectSu2Gradients(grads[1], fields[1])
 
         return processedGrads
+

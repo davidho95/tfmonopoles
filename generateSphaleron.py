@@ -88,7 +88,7 @@ while rssGrad < rssGradOld and numSteps < maxNumSteps:
     # Postprocess the gauge field gradients
     grads = theory.processGradients(grads, vars)
 
-    # Compute rms gradient for stopping criterion
+    # Compute RSS gradient for stopping criterion
     gradSq = FieldTools.innerProduct(grads[0], grads[0], adj=True)
     gradSq += FieldTools.innerProduct(grads[1], grads[1], tr=True, adj=True)
     gradSq += FieldTools.innerProduct(grads[2], grads[2], tr=False, adj=True)

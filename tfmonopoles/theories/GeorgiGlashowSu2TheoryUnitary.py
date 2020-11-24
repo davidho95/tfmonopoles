@@ -50,7 +50,7 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
             return shiftedField
 
         latShape = tf.shape(scalarField)[0:-2]
-        boundaryMask = self.boundaryMask(latShape, dir, +1)
+        boundaryMask = self.scalarBoundaryMask(latShape, dir, +1)
 
         shiftedField = boundaryMask * shiftedField
 

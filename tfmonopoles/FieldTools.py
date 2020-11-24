@@ -283,3 +283,14 @@ def constantMagneticField(X, Y, Z, fieldDir, numFluxQuanta):
 
 
     return tf.stack(gaugeCpts, -3)
+
+# Gets the indices of the sites on the boundary
+def boundaryIndices(latShape, dir, sign):
+    indexVectors = [tf.range(latShape[0]), tf.range(latShape[1]), tf.range(latShape[2])]
+    if sign == +1:
+        indexVectors[dir] = latShape[dir] - 1
+    else:
+        indexVectors[dir] = 0
+    indices = tf.stack(tf.meshgrid(indexVectors[0], indexVectors[1], indexVectors[2], indexing="ij"), -1)
+
+    return indices

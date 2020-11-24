@@ -41,37 +41,18 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
 
     # Shifts scalar field using user supplied BC's
     def shiftScalarField(self, scalarField, dir, sign):
-        shiftedField = tf.roll(scalarField, -sign, dir)
+        scalarFieldShifted = tf.roll(scalarField, -sign, dir)
 
         pauliMatNum = self.boundaryConditions[dir]
 
         # Only requires flipping if third pauli matrix is used
         if pauliMatNum != 3:
-            return shiftedField
+            return scalarFieldShifted
 
         latShape = tf.shape(scalarField)[0:-2]
-        boundaryMask = self.scalarBoundaryMask(latShape, dir, +1)
+        indices = FieldTools.boundaryIndices(latShape, dir, +1)
+        updates = -1.0*tf.gather_nd(gaugeFieldShifted, indices)
 
-        shiftedField = boundaryMask * shiftedField
+        scalarFieldShifted = tf.tensor_scatter_nd_update(scalarFieldShifted, indices, updates)
 
-        return shiftedField
-
-    # Mask to flip sign at the boundary
-    def scalarBoundaryMask(self, latShape, dir, sign):
-        onesBatchShape = tf.concat([latShape, [1, 1]], 0)
-        onesBatchShape = tf.tensor_scatter_nd_update(
-            onesBatchShape, [[dir]], [onesBatchShape[dir] - 1]
-            )
-
-        minusOnesBatchShape = tf.concat([latShape, [1, 1]], 0)
-        minusOnesBatchShape = tf.tensor_scatter_nd_update(
-            minusOnesBatchShape, [[dir]], [1]
-            )
-
-        ones = tf.ones(onesBatchShape, dtype=tf.complex128)
-        minusOnes = -1.0*tf.ones(minusOnesBatchShape, dtype=tf.complex128)
-
-        if sign == +1:
-            boundaryMask = tf.concat([ones, minusOnes], dir)
-        else:
-            boundaryMask = tf.concat([minusOnes, ones], dir)
+        return scalarFieldShifted

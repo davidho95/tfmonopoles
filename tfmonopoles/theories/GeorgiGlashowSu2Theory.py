@@ -27,9 +27,9 @@ class GeorgiGlashowSu2Theory:
 
         # Currently only 't Hooft lines in the x direction are supported
         if "tHooftLine" in params:
-            self.tHooftline = params["tHooftLine"]
+            self.tHooftLine = params["tHooftLine"]
         else:
-            self.tHooftline = False
+            self.tHooftLine = False
 
     def energy(self, scalarField, gaugeField):
         return tf.math.reduce_sum(self.energyDensity(scalarField, gaugeField))
@@ -87,7 +87,7 @@ class GeorgiGlashowSu2Theory:
 
         # If 't Hooft line specified, flip a line of y-z plaquettes in the x 
         # direction
-        if (dir1 != 0 and dir2 != 0 and self.tHooftline):
+        if (dir1 != 0 and dir2 != 0 and self.tHooftLine):
             plaquette = self.flipPlaquette(plaquette)
 
         return plaquette
@@ -156,29 +156,17 @@ class GeorgiGlashowSu2Theory:
                 self.u1Plaquette(gaugeField, scalarField, dir1, dir2))
             )
 
-        if dir == 0:
-            # Fix values along the 't Hooft line
-            mask = tf.squeeze(self.tHooftLineMask(magneticField))
+        if (dir == 0 and self.tHooftLine):
+            # Correct values along the 't Hooft line
+            latShape = tf.shape(magneticField)
+            indices = self.tHooftLineIndices(latShape)
 
-            minusIndices = tf.where(
-                tf.math.logical_and(
-                    tf.math.equal(mask, -1), tf.math.less(magneticField, 0)
-                    )
-                )
-            plusIndices = tf.where(
-                tf.math.logical_and(
-                    tf.math.equal(mask, -1), tf.math.greater(magneticField, 0)
-                    )
-                )
-            minusUpdates = tf.gather_nd(magneticField, minusIndices) + np.pi
-            plusUpdates = tf.gather_nd(magneticField, plusIndices) - np.pi
-            magneticField = tf.tensor_scatter_nd_update(
-                magneticField, minusIndices, minusUpdates
-                )
-            magneticField = tf.tensor_scatter_nd_update(
-                magneticField, plusIndices, plusUpdates
-                )
+            updates = tf.gather_nd(magneticField, indices)
+            updates = updates - np.pi * tf.sign(updates)
 
+            magneticField = tf.tensor_scatter_nd_update(
+                magneticField, indices, updates
+                )
         return 2.0/self.gaugeCoupling * magneticField
 
     # Shifts scalar field using supplied BC's
@@ -221,69 +209,13 @@ class GeorgiGlashowSu2Theory:
     def flipPlaquette(self, plaquette):
         # Mask to flip plaquettes along a line in the x direction, giving a
         # 't Hooft line
-        mask = self.tHooftLineMask(plaquette)
+        latShape = tf.shape(plaquette)[0:3]
+        indices = self.tHooftLineIndices(latShape)
 
-        return plaquette * mask
+        updates = -1.0*tf.gather_nd(plaquette, indices)
+        plaquette = tf.tensor_scatter_nd_update(plaquette, indices, updates)
 
-    # Create a mask to pre- and post-multiply the scalar field, in order to apply the 
-    # boundary conditions 
-    def scalarBoundaryMask(self, latShape, dir, sign):
-        pauliMatNum = self.boundaryConditions[dir]
-
-        identityBatchShape = latShape
-        identityBatchShape = tf.tensor_scatter_nd_update(
-            identityBatchShape, [[dir]], [identityBatchShape[dir] - 1]
-            )
-
-        complementaryBatchShape = latShape
-        complementaryBatchShape = tf.tensor_scatter_nd_update(
-            complementaryBatchShape, [[dir]], [1]
-            )
-
-        identities = tf.eye(
-            2, batch_shape=identityBatchShape, dtype=tf.complex128
-            )
-        pauliMatrices = 1j*tf.eye(2, batch_shape=complementaryBatchShape,\
-            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
-
-        # Concatenating identities with pauli matrices gives a tensor the same
-        # size as the input
-        if sign == +1:
-            boundaryMask = tf.concat([identities, pauliMatrices], dir)
-        else:
-            boundaryMask = tf.concat([pauliMatrices, identities], dir)
-
-        return boundaryMask
-
-    # Create a mask to pre- and post-multiply the scalar field, in order to
-    # apply the boundary conditions 
-    def gaugeBoundaryMask(self, latShape, dir, sign):
-        pauliMatNum = self.boundaryConditions[dir]
-
-        identityBatchShape = tf.concat([latShape], 0)
-        identityBatchShape = tf.tensor_scatter_nd_update(
-            identityBatchShape, [[dir]], [identityBatchShape[dir] - 1]
-            )
-
-        complementaryBatchShape = tf.concat([latShape], 0)
-        complementaryBatchShape = tf.tensor_scatter_nd_update(
-            complementaryBatchShape, [[dir]], [1]
-            )
-
-        identities = tf.eye(
-            2, batch_shape=identityBatchShape, dtype=tf.complex128
-            )
-        pauliMatrices = tf.eye(2, batch_shape=complementaryBatchShape,\
-            dtype=tf.complex128) @ FieldTools.pauliMatrix(pauliMatNum)
-
-        # Concatenating identities with pauli matrices gives a tensor the same
-        # size as the input
-        if sign == +1:
-            boundaryMask = tf.concat([identities, pauliMatrices], dir)
-        else:
-            boundaryMask = tf.concat([pauliMatrices, identities], dir)
-
-        return boundaryMask
+        return plaquette
 
     # Mask of -1 values along a tHooft line with ones elsewhere to flip plaquettes
     def tHooftLineMask(self, plaquette):
@@ -292,13 +224,21 @@ class GeorgiGlashowSu2Theory:
         mask = -tf.ones([latShape[0], 1, 1, 1, 1], dtype=tf.complex128)
 
         yPaddings = [latShape[1] // 2, latShape[1] - latShape[1] // 2 - 1]
-        zPaddings = [latShape[1] // 2, latShape[1] - latShape[1] // 2 - 1]
+        zPaddings = [latShape[2] // 2, latShape[2] - latShape[2] // 2 - 1]
 
         paddings = [[0,0], yPaddings, zPaddings, [0,0], [0,0]]
 
         mask = tf.pad(mask, paddings, constant_values=1)
 
         return mask
+
+    # Indices of the 't Hooft line
+    def tHooftLineIndices(self, latShape):
+        indices = tf.stack(tf.meshgrid(
+            tf.range(latShape[0]), latShape[1] //2, latShape[1] // 2, indexing="ij"
+            ), -1)
+
+        return indices
 
     # Postprocess the gauge gradients so they obey the constraints on the fields
     # Expects grad to be the output of tf.GradientTape.gradient()

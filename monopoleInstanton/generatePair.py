@@ -10,9 +10,6 @@ import numpy as np
 from tfmonopoles.theories import GeorgiGlashowSu2TheoryUnitary
 from tfmonopoles import FieldTools
 import argparse
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
 
 parser = argparse.ArgumentParser(description="Generate a monopole-antimonopole pair")
 parser.add_argument("--vev", "-v", default=1.0, type=float)
@@ -43,11 +40,22 @@ inputParams = np.load(inputPath + "/params.npy", allow_pickle=True).item()
 # Infer lattice size from input
 latShape = tf.shape(inputScalarField)
 
-# Find monopole position using minimum of scalar field (can't use divB as the
-# 't Hooft line breaks the magnetic field)
-scalarMin = tf.reduce_min(tf.math.abs(inputScalarField))
-scalarMinCoords = tf.where(tf.math.equal(tf.math.abs(inputScalarField), scalarMin))
-monopoleXCoord = tf.cast(tf.reduce_mean(scalarMinCoords[:,0]), tf.int32)
+# Theory to work on the single pole field
+singlePoleTheory = GeorgiGlashowSu2TheoryUnitary(inputParams)
+
+# Find monopole position by looking for nonzero values of divB
+magX = singlePoleTheory.magneticField(inputGaugeField, inputScalarField, 0)
+magY = singlePoleTheory.magneticField(inputGaugeField, inputScalarField, 1)
+magZ = singlePoleTheory.magneticField(inputGaugeField, inputScalarField, 2)
+magXShifted = tf.Variable(tf.roll(magX,-1,0))
+magXShifted[-1,:,:].assign(-magXShifted[-1,:,:])
+magYShifted = tf.Variable(tf.roll(magY,-1,1))
+magZShifted = tf.Variable(tf.roll(magZ,-1,2))
+divB =  magXShifted + magYShifted + magZShifted - magX - magY - magZ
+monopoleCoords = tf.cast(tf.where(tf.greater(tf.math.abs(divB), 1e-3)), tf.int32)
+monopoleXCoord = monopoleCoords[0][0]
+
+print(monopoleXCoord)
 
 # Calculate shifts required to give the desired separation, centred about the
 # origin
@@ -57,9 +65,7 @@ desiredRightPos = latShape[0] // 2 + separation // 2
 shiftNumLeft = ((desiredRightPos - monopoleXCoord) + latShape[0]) % latShape[0]
 shiftNumRight = ((desiredLeftPos - monopoleXCoord) + latShape[0]) % latShape[0]
 
-# Use a theory to shift the fields and apply the correct boundary conditions
-singlePoleTheory = GeorgiGlashowSu2TheoryUnitary(inputParams)
-
+# Shift the poles around, obeying the BCs
 leftGaugeField = inputGaugeField
 leftScalarField = inputScalarField
 rightGaugeField = inputGaugeField

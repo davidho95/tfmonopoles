@@ -256,8 +256,17 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
 
         return boundaryMask
 
+    # Process gradients so the respect the field constraints. Includes division by
+    # 2*pi*R to make gradients comparable to those in 3d cartesian theories
     def processGradients(self, grads, fields):
         processedGrads = grads
 
-        processedGrads[0] = grads[0] / (2*np.pi*self.metric)
-        processedGrads[1] = FieldTools.projectSu2Gradients(grads[1], fields[1]) /(2*np.pi*self.metric)
+        processedGrads[0] = grads[0] / (2*np.pi*tf.cast(
+            tf.reshape(self.metric, tf.concat([self.latShape, [1, 1]], 0)), tf.complex128)
+            )
+        processedGrads[1] = FieldTools.projectSu2Gradients(grads[1], fields[1])
+        processedGrads[1] = processedGrads[1] / (2*np.pi*tf.cast(
+            tf.reshape(self.metric, tf.concat([self.latShape, [1, 1, 1]], 0)), tf.complex128)
+            )
+
+        return processedGrads

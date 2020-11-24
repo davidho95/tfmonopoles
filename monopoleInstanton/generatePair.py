@@ -82,6 +82,10 @@ for ii in range(shiftNumRight):
 gaugeField = FieldTools.linearSuperpose(leftGaugeField, rightGaugeField)
 scalarField = 0.5*(leftScalarField + rightScalarField)
 
+# Shift once more to centre the pair
+gaugeField = tf.roll(gaugeField, -1, 0)
+scalarField = tf.roll(scalarField, -1, 0)
+
 numFluxQuanta = args.externalField
 # Negative flux quanta results in lowering of energy (dipole points along
 # negative x axis)

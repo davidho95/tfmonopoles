@@ -73,24 +73,24 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
         return energyDensity
 
     # Averaged plaquette that lies on a lattice site
-    def avgPlaquette(self, gaugeField, dir1, dir2):
-        plaquette = self.plaquette(gaugeField, dir1, dir2)
+    def avgPlaquette(self, gaugeField, cpt1, cpt2):
+        plaquette = self.plaquette(gaugeField, cpt1, cpt2)
         avgPlaquette = plaquette
-        avgPlaquette += self.shiftPlaquette(plaquette, dir1, dir2, dir1, -1)
-        avgPlaquette += self.shiftPlaquette(plaquette, dir1, dir2, dir2, -1)
+        avgPlaquette += self.shiftPlaquette(plaquette, cpt1, cpt2, cpt1, -1)
+        avgPlaquette += self.shiftPlaquette(plaquette, cpt1, cpt2, cpt2, -1)
         avgPlaquette += self.shiftPlaquette(
-            self.shiftPlaquette(plaquette, dir1, dir2, dir1, -1), dir1, dir2,
-            dir2, -1)
+            self.shiftPlaquette(plaquette, cpt1, cpt2, cpt1, -1), cpt1, cpt2,
+            cpt2, -1)
 
         return 0.25*avgPlaquette
 
     # Average squared covariant derivative that lies on a lattice site. Note
     # we cannot average the covariant derivative and then square as this would
     # result in nonlocality
-    def avgCovDerivSq(self, scalarField, gaugeField, dir):
-        covDeriv = self.covDeriv(scalarField, gaugeField, dir)
+    def avgCovDerivSq(self, scalarField, gaugeField, cpt):
+        covDeriv = self.covDeriv(scalarField, gaugeField, cpt)
         covDerivSq = covDeriv @ covDeriv
-        covDerivSqShiftedBwd = self.shiftCovDeriv(covDerivSq, dir, -1)
+        covDerivSqShiftedBwd = self.shiftCovDeriv(covDerivSq, cpt, -1)
         avgCovDerivSq = covDerivSq + covDerivSqShiftedBwd
 
         return 0.5*avgCovDerivSq
@@ -99,17 +99,17 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
     # dir indicates the direction (r,y,z) of the shift and sign (+-1) indicates
     # forward or backwards. As there is a physical boundary, shifting in one
     # direction then another is not an identity operation.
-    def shiftScalarField(self, scalarField, dir, sign):
+    def shiftScalarField(self, scalarField, cpt, sign):
         # Moving one site forwards is equivalent to shifting the whole field
         # backwards, hence the minus sign (active/passive transform)
-        scalarFieldShifted = tf.roll(scalarField, -sign, dir)
+        scalarFieldShifted = tf.roll(scalarField, -sign, cpt)
 
-        if dir != 0:
+        if cpt != 0:
             return scalarFieldShifted
 
         # Apply reflecting BC's by setting links at the boundary to
         # corresponding values from unshifted field
-        indices = FieldTools.boundaryIndices(self.latShape, dir, sign)
+        indices = FieldTools.boundaryIndices(self.latShape, cpt, sign)
         updates = tf.gather_nd(scalarField, indices)
         scalarFieldShifted = tf.tensor_scatter_nd_update(
             scalarFieldShifted, indices, updates
@@ -117,20 +117,20 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
 
         return scalarFieldShifted
     # Shifts gauge field using periodic (y,z) or reflecting (r) BC's.
-    # dir indicates the direction (r,y,z) of the shift and sign (+-1) indicates
+    # cpt indicates the direction (r,y,z) of the shift and sign (+-1) indicates
     # forward or backwards. As there is a physical boundary, shifting in one
     # direction then another is not an identity operation.
-    def shiftGaugeField(self, gaugeField, dir, sign):
+    def shiftGaugeField(self, gaugeField, cpt, sign):
         # Moving one site forwards is equivalent to shifting the whole field
         # backwards, hence the minus sign (active/passive transform)
-        gaugeFieldShifted = tf.roll(gaugeField, -sign, dir)
+        gaugeFieldShifted = tf.roll(gaugeField, -sign, cpt)
 
-        if dir != 0:
+        if cpt != 0:
             return gaugeFieldShifted
 
         # Apply reflecting BC's by setting links at the boundary to
         # corresponding values from unshifted field
-        indices = FieldTools.boundaryIndices(self.latShape, dir, sign)
+        indices = FieldTools.boundaryIndices(self.latShape, cpt, sign)
         updates = tf.gather_nd(gaugeField, indices)
         gaugeFieldShifted = tf.tensor_scatter_nd_update(
             gaugeFieldShifted, indices, updates
@@ -149,7 +149,7 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
         return gaugeFieldShifted
 
     # Shifts plaquette using periodic (y,z) or reflecting (r) BC's.
-    # dir indicates the direction (r,y,z) of the shift and sign (+-1) indicates
+    # cpt indicates the direction (r,y,z) of the shift and sign (+-1) indicates
     # forward or backwards 
     def shiftPlaquette(self, plaquette, plaqDir1, plaqDir2, shiftDir, sign):
         # Moving one site forwards is equivalent to shifting the whole field
@@ -182,13 +182,13 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
     # forward or backwards 
     #
     # Assumes derivative direction is the same as dir
-    def shiftCovDeriv(self, covDeriv, dir, sign):
-        covDerivShifted = tf.roll(covDeriv, -sign, dir)
+    def shiftCovDeriv(self, covDeriv, cpt, sign):
+        covDerivShifted = tf.roll(covDeriv, -sign, cpt)
 
-        if dir != 0:
+        if cpt != 0:
             return covDerivShifted
 
-        indices = FieldTools.boundaryIndices(self.latShape, dir, sign)
+        indices = FieldTools.boundaryIndices(self.latShape, cpt, sign)
 
         if sign == -1:
             updates = tf.zeros(tf.concat([tf.shape(indices)[0:-1], [2,2]], 0), dtype=tf.complex128)

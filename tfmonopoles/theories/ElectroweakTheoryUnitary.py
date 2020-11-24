@@ -114,31 +114,31 @@ class ElectroweakTheoryUnitary:
         return energyDensity
 
     # SU(2) Wilson plaquette on the lattice
-    def isospinPlaquette(self, isospinField, dir1, dir2):
-        plaquette = isospinField[:,:,:,dir1,:,:]
+    def isospinPlaquette(self, isospinField, cpt1, cpt2):
+        plaquette = isospinField[:,:,:,cpt1,:,:]
         plaquette = plaquette @\
-            self.shiftIsospinField(isospinField, dir1, +1)[:,:,:,dir2,:,:]
+            self.shiftIsospinField(isospinField, cpt1, +1)[:,:,:,cpt2,:,:]
         plaquette = plaquette @\
             tf.linalg.adjoint(
-                self.shiftIsospinField(isospinField,dir2, +1)[:,:,:,dir1,:,:]
+                self.shiftIsospinField(isospinField,cpt2, +1)[:,:,:,cpt1,:,:]
                 )
-        plaquette = plaquette @ tf.linalg.adjoint(isospinField[:,:,:,dir2,:,:])
+        plaquette = plaquette @ tf.linalg.adjoint(isospinField[:,:,:,cpt2,:,:])
 
         return plaquette
 
     # U(1) Wilson plaquette on the lattice
-    def hyperchargePlaquette(self, hyperchargeField, dir1, dir2):
-        plaquette = hyperchargeField[:,:,:,dir1,:,:]
+    def hyperchargePlaquette(self, hyperchargeField, cpt1, cpt2):
+        plaquette = hyperchargeField[:,:,:,cpt1,:,:]
         plaquette = plaquette @\
-            self.shiftHyperchargeField(hyperchargeField, dir1, +1)[:,:,:,dir2,:,:]
+            self.shiftHyperchargeField(hyperchargeField, cpt1, +1)[:,:,:,cpt2,:,:]
         plaquette = plaquette @\
             tf.linalg.adjoint(
                 self.shiftHyperchargeField(
-                    hyperchargeField, dir2, +1
-                    )[:,:,:,dir1,:,:]
+                    hyperchargeField, cpt2, +1
+                    )[:,:,:,cpt1,:,:]
                 )
         plaquette = plaquette @\
-            tf.linalg.adjoint(hyperchargeField[:,:,:,dir2,:,:])
+            tf.linalg.adjoint(hyperchargeField[:,:,:,cpt2,:,:])
 
         return plaquette
 
@@ -148,61 +148,61 @@ class ElectroweakTheoryUnitary:
         return tf.math.sqrt(higgsMagnitudeSq)
 
     # Projects out abelian (electromagnetic) subgroup of gauge fields
-    def getEmLink(self, isospinField, hyperchargeField, dir):
-        emLink = (tf.linalg.adjoint(hyperchargeField[:,:,:,dir,:,:]) *\
-            isospinField[:,:,:,dir,:,:])[:,:,:,1,1]
+    def getEmLink(self, isospinField, hyperchargeField, cpt):
+        emLink = (tf.linalg.adjoint(hyperchargeField[:,:,:,cpt,:,:]) *\
+            isospinField[:,:,:,cpt,:,:])[:,:,:,1,1]
 
         return emLink
 
     # Plaquette formed from abelian links
-    def emPlaquette(self, isospinField, hyperchargeField, dir1, dir2):
-        emPlaquette = self.getEmLink(isospinField, hyperchargeField, dir1)
+    def emPlaquette(self, isospinField, hyperchargeField, cpt1, cpt2):
+        emPlaquette = self.getEmLink(isospinField, hyperchargeField, cpt1)
         emPlaquette = emPlaquette * self.getEmLink(
-            self.shiftIsospinField(isospinField, dir1, +1), \
-                self.shiftHyperchargeField(hyperchargeField, dir1), \
-                dir2
+            self.shiftIsospinField(isospinField, cpt1, +1), \
+                self.shiftHyperchargeField(hyperchargeField, cpt1), \
+                cpt2
             )
         emPlaquette = emPlaquette * tf.math.conj(
             self.getEmLink(
-                self.shiftIsospinField(isospinField, dir2, +1), \
-                self.shiftHyperchargeField(hyperchargeField, dir2), \
-                    dir1
+                self.shiftIsospinField(isospinField, cpt2, +1), \
+                self.shiftHyperchargeField(hyperchargeField, cpt2), \
+                    cpt1
                 )
             )
         emPlaquette = emPlaquette * tf.math.conj(
-            self.getEmLink(isospinField, hyperchargeField, dir2)
+            self.getEmLink(isospinField, hyperchargeField, cpt2)
             )
 
         return emPlaquette
 
-    def magneticField(self, isospinField, hyperchargeField, dir):
-        dir1 = (dir + 1) % 3
-        dir2 = (dir + 2) % 3
+    def magneticField(self, isospinField, hyperchargeField, cpt):
+        cpt1 = (cpt + 1) % 3
+        cpt2 = (cpt + 2) % 3
 
         magneticField = 2.0/(self.gaugeCoupling * tf.math.sqrt(
             self.tanSqMixingAngle)
             )*\
             tf.math.angle(
                 self.emPlaquette(
-                    isospinField, hyperchargeField, dir1, dir2
+                    isospinField, hyperchargeField, cpt1, cpt2
                 )
             )
 
         return magneticField
 
     # Shifts scalar field using periodic BCs
-    def shiftHiggsField(self, higgsField, dir, sign):
-        shiftedField = tf.roll(higgsField, -sign, dir)
+    def shiftHiggsField(self, higgsField, cpt, sign):
+        shiftedField = tf.roll(higgsField, -sign, cpt)
         return shiftedField
 
     # Shifts isospin field using periodic BCs
-    def shiftIsospinField(self, isospinField, dir, sign):
-        shiftedField = tf.roll(isospinField, -sign, dir)
+    def shiftIsospinField(self, isospinField, cpt, sign):
+        shiftedField = tf.roll(isospinField, -sign, cpt)
         return shiftedField
 
     # Shifts hypercharge field using periodic BCs
-    def shiftHyperchargeField(self, hyperchargeField, dir, sign):
-        shiftedField = tf.roll(hyperchargeField, -sign, dir)
+    def shiftHyperchargeField(self, hyperchargeField, cpt, sign):
+        shiftedField = tf.roll(hyperchargeField, -sign, cpt)
         return shiftedField
 
     # Postprocess the gauge gradients so they obey the constraints on the fields

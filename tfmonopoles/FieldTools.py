@@ -255,42 +255,42 @@ def constantMagneticField(X, Y, Z, fieldDir, numFluxQuanta):
     zeroMat = tf.zeros(latShape, dtype=tf.float64)
     flux = 4*np.pi*tf.cast(numFluxQuanta, tf.float64)
 
-    dir1 = (fieldDir + 1) % 3
-    dir2 = (fieldDir + 2) % 3 
+    cpt1 = (fieldDir + 1) % 3
+    cpt2 = (fieldDir + 2) % 3 
 
     gaugeVecDir2 = 0.5*flux / (
-        tf.cast(latShape[dir2]*latShape[dir1], tf.float64)
-            ) * coords[dir1]
+        tf.cast(latShape[cpt2]*latShape[cpt1], tf.float64)
+            ) * coords[cpt1]
 
-    # Mask for sites on the dir1 boundary
-    dir1FaceShape = list(latShape)
-    dir1FaceShape[dir1] = 1
-    dir1Mask = tf.ones(dir1FaceShape, dtype=tf.float64)
+    # Mask for sites on the cpt1 boundary
+    cpt1FaceShape = list(latShape)
+    cpt1FaceShape[cpt1] = 1
+    cpt1Mask = tf.ones(cpt1FaceShape, dtype=tf.float64)
 
     paddings = [[0,0], [0,0], [0,0]]
-    paddings[dir1] = [0, latShape[dir1] - 1]
-    dir1Mask = tf.pad(dir1Mask, paddings, constant_values=0)
+    paddings[cpt1] = [0, latShape[cpt1] - 1]
+    cpt1Mask = tf.pad(cpt1Mask, paddings, constant_values=0)
 
-    gaugeVecDir2 += dir1Mask*0.5*flux / tf.cast(latShape[dir2], tf.float64)
+    gaugeVecDir2 += cpt1Mask*0.5*flux / tf.cast(latShape[cpt2], tf.float64)
 
     gaugeVecDir1 = zeroMat -\
-        0.5*dir1Mask*coords[dir2]*flux / tf.cast(latShape[dir2], tf.float64)
+        0.5*cpt1Mask*coords[cpt2]*flux / tf.cast(latShape[cpt2], tf.float64)
 
     gaugeCpts = [zeroMat, zeroMat, zeroMat]
     gaugeCpts[fieldDir] = vecToSu2(tf.stack([zeroMat, zeroMat, zeroMat], -1))
-    gaugeCpts[dir1] = vecToSu2(tf.stack([zeroMat, zeroMat, gaugeVecDir1], -1))
-    gaugeCpts[dir2] = vecToSu2(tf.stack([zeroMat, zeroMat, gaugeVecDir2], -1))
+    gaugeCpts[cpt1] = vecToSu2(tf.stack([zeroMat, zeroMat, gaugeVecDir1], -1))
+    gaugeCpts[cpt2] = vecToSu2(tf.stack([zeroMat, zeroMat, gaugeVecDir2], -1))
 
 
     return tf.stack(gaugeCpts, -3)
 
 # Gets the indices of the sites on the boundary
-def boundaryIndices(latShape, dir, sign):
+def boundaryIndices(latShape, cpt, sign):
     indexVectors = [tf.range(latShape[0]), tf.range(latShape[1]), tf.range(latShape[2])]
     if sign == +1:
-        indexVectors[dir] = latShape[dir] - 1
+        indexVectors[cpt] = latShape[cpt] - 1
     else:
-        indexVectors[dir] = 0
+        indexVectors[cpt] = 0
     indices = tf.stack(tf.meshgrid(indexVectors[0], indexVectors[1], indexVectors[2], indexing="ij"), -1)
 
     return indices

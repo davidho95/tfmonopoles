@@ -74,20 +74,20 @@ class GeorgiGlashowSu2Theory:
         return energyDensity
 
     # Wilson plaquette on the lattice
-    def plaquette(self, gaugeField, dir1, dir2):
-        plaquette = gaugeField[:,:,:,dir1,:,:]
+    def plaquette(self, gaugeField, cpt1, cpt2):
+        plaquette = gaugeField[:,:,:,cpt1,:,:]
         plaquette = plaquette @\
-            self.shiftGaugeField(gaugeField, dir1, +1)[:,:,:,dir2,:,:]
+            self.shiftGaugeField(gaugeField, cpt1, +1)[:,:,:,cpt2,:,:]
         plaquette = plaquette @ \
             tf.linalg.adjoint(
-                self.shiftGaugeField(gaugeField, dir2, +1)[:,:,:,dir1,:,:]
+                self.shiftGaugeField(gaugeField, cpt2, +1)[:,:,:,cpt1,:,:]
                 )
-        plaquette = plaquette @ tf.linalg.adjoint(gaugeField[:,:,:,dir2,:,:])
+        plaquette = plaquette @ tf.linalg.adjoint(gaugeField[:,:,:,cpt2,:,:])
 
 
         # If 't Hooft line specified, flip a line of y-z plaquettes in the x 
         # direction
-        if (dir1 != 0 and dir2 != 0 and self.tHooftLine):
+        if (cpt1 != 0 and cpt2 != 0 and self.tHooftLine):
             plaquette = self.flipPlaquette(plaquette)
 
         return plaquette
@@ -95,10 +95,10 @@ class GeorgiGlashowSu2Theory:
         return plaquette
 
     # Gauge covariant derivative
-    def covDeriv(self, scalarField, gaugeField, dir):
-        scalarFieldShifted = self.shiftScalarField(scalarField, dir, +1)
-        covDeriv = gaugeField[:,:,:,dir,:,:] @ scalarFieldShifted @\
-            tf.linalg.adjoint(gaugeField[:,:,:,dir,:,:]) - scalarField
+    def covDeriv(self, scalarField, gaugeField, cpt):
+        scalarFieldShifted = self.shiftScalarField(scalarField, cpt, +1)
+        covDeriv = gaugeField[:,:,:,cpt,:,:] @ scalarFieldShifted @\
+            tf.linalg.adjoint(gaugeField[:,:,:,cpt,:,:]) - scalarField
         return covDeriv
 
     # Projects out abelian subgroup of gauge field
@@ -118,45 +118,45 @@ class GeorgiGlashowSu2Theory:
         return u1Projector
 
     # Projects out abelian subgroup of gauge field
-    def getU1Link(self, gaugeField, scalarField, dir):
+    def getU1Link(self, gaugeField, scalarField, cpt):
         projector = self.u1Projector(scalarField)
         projectorShifted = self.u1Projector(
-            self.shiftScalarField(scalarField, dir, +1)
+            self.shiftScalarField(scalarField, cpt, +1)
             )
 
-        u1Link = projector @ gaugeField[:,:,:,dir,:,:] @ projectorShifted
+        u1Link = projector @ gaugeField[:,:,:,cpt,:,:] @ projectorShifted
 
         return u1Link
 
     # Plaquette formed from abelian links
-    def u1Plaquette(self, gaugeField, scalarField, dir1, dir2):
-        u1Plaquette = self.getU1Link(gaugeField, scalarField, dir1)
+    def u1Plaquette(self, gaugeField, scalarField, cpt1, cpt2):
+        u1Plaquette = self.getU1Link(gaugeField, scalarField, cpt1)
         u1Plaquette = u1Plaquette @ self.getU1Link(
-            self.shiftGaugeField(gaugeField, dir1, +1), \
-                self.shiftScalarField(scalarField, dir1, +1), dir2
+            self.shiftGaugeField(gaugeField, cpt1, +1), \
+                self.shiftScalarField(scalarField, cpt1, +1), cpt2
             )
         u1Plaquette = u1Plaquette @ tf.linalg.adjoint(
             self.getU1Link(
-                self.shiftGaugeField(gaugeField, dir2, +1),\
-                    self.shiftScalarField(scalarField, dir2, +1), dir1
+                self.shiftGaugeField(gaugeField, cpt2, +1),\
+                    self.shiftScalarField(scalarField, cpt2, +1), cpt1
                 )
             )
         u1Plaquette = u1Plaquette @ tf.linalg.adjoint(
-            self.getU1Link(gaugeField, scalarField, dir2)
+            self.getU1Link(gaugeField, scalarField, cpt2)
             )
 
         return u1Plaquette
 
-    def magneticField(self, gaugeField, scalarField, dir):
-        dir1 = (dir + 1) % 3
-        dir2 = (dir + 2) % 3
+    def magneticField(self, gaugeField, scalarField, cpt):
+        cpt1 = (cpt + 1) % 3
+        cpt2 = (cpt + 2) % 3
 
         magneticField = tf.math.angle(
             tf.linalg.trace(
-                self.u1Plaquette(gaugeField, scalarField, dir1, dir2))
+                self.u1Plaquette(gaugeField, scalarField, cpt1, cpt2))
             )
 
-        if (dir == 0 and self.tHooftLine):
+        if (cpt == 0 and self.tHooftLine):
             # Correct values along the 't Hooft line
             latShape = tf.shape(magneticField)
             indices = self.tHooftLineIndices(latShape)
@@ -170,16 +170,16 @@ class GeorgiGlashowSu2Theory:
         return 2.0/self.gaugeCoupling * magneticField
 
     # Shifts scalar field using supplied BC's
-    def shiftScalarField(self, scalarField, dir, sign):
-        scalarFieldShifted = tf.roll(scalarField, -sign, dir)
+    def shiftScalarField(self, scalarField, cpt, sign):
+        scalarFieldShifted = tf.roll(scalarField, -sign, cpt)
 
-        pauliMatNum = self.boundaryConditions[dir]
+        pauliMatNum = self.boundaryConditions[cpt]
 
         if pauliMatNum == 0:
             return scalarFieldShifted
 
         latShape = tf.shape(scalarField)[0:3]
-        indices = FieldTools.boundaryIndices(latShape, dir, sign)
+        indices = FieldTools.boundaryIndices(latShape, cpt, sign)
 
         updates = tf.gather_nd(scalarFieldShifted, indices)
         updates = -1.0*FieldTools.pauliMatrix(pauliMatNum) @\
@@ -191,16 +191,16 @@ class GeorgiGlashowSu2Theory:
         return scalarFieldShifted
 
     # Shifts gauge field using supplied BC's
-    def shiftGaugeField(self, gaugeField, dir, sign):
-        gaugeFieldShifted = tf.roll(gaugeField, -sign, dir)
+    def shiftGaugeField(self, gaugeField, cpt, sign):
+        gaugeFieldShifted = tf.roll(gaugeField, -sign, cpt)
 
-        pauliMatNum = self.boundaryConditions[dir]
+        pauliMatNum = self.boundaryConditions[cpt]
 
         if pauliMatNum == 0:
             return gaugeFieldShifted
 
         latShape = tf.shape(gaugeField)[0:3]
-        indices = FieldTools.boundaryIndices(latShape, dir, sign)
+        indices = FieldTools.boundaryIndices(latShape, cpt, sign)
 
         updates = tf.gather_nd(gaugeFieldShifted, indices)
         updates = FieldTools.pauliMatrix(pauliMatNum) @\

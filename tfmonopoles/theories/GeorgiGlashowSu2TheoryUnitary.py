@@ -23,34 +23,34 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
         return energyDensity
 
     # Gauge covariant derivative
-    def covDeriv(self, scalarField, gaugeField, dir):
-        scalarFieldShifted = self.shiftScalarField(scalarField, dir, +1)
+    def covDeriv(self, scalarField, gaugeField, cpt):
+        scalarFieldShifted = self.shiftScalarField(scalarField, cpt, +1)
         lieAlgField = scalarField * FieldTools.pauliMatrix(3)
         lieAlgFieldShifted = scalarFieldShifted * FieldTools.pauliMatrix(3)
-        covDeriv = gaugeField[:,:,:,dir,:,:] @ lieAlgFieldShifted @\
-            tf.linalg.adjoint(gaugeField[:,:,:,dir,:,:]) - lieAlgField
+        covDeriv = gaugeField[:,:,:,cpt,:,:] @ lieAlgFieldShifted @\
+            tf.linalg.adjoint(gaugeField[:,:,:,cpt,:,:]) - lieAlgField
         return covDeriv
 
     # Projects out abelian subgroup of gauge field
-    def getU1Link(self, gaugeField, scalarField, dir):
-        u1Link = gaugeField[:,:,:,dir,0,0]
+    def getU1Link(self, gaugeField, scalarField, cpt):
+        u1Link = gaugeField[:,:,:,cpt,0,0]
         u1Link = tf.expand_dims(u1Link, -1)
         u1Link = tf.expand_dims(u1Link, -1)
 
         return u1Link
 
     # Shifts scalar field using user supplied BC's
-    def shiftScalarField(self, scalarField, dir, sign):
-        scalarFieldShifted = tf.roll(scalarField, -sign, dir)
+    def shiftScalarField(self, scalarField, cpt, sign):
+        scalarFieldShifted = tf.roll(scalarField, -sign, cpt)
 
-        pauliMatNum = self.boundaryConditions[dir]
+        pauliMatNum = self.boundaryConditions[cpt]
 
         # Only requires flipping if third pauli matrix is used
         if pauliMatNum != 3:
             return scalarFieldShifted
 
         latShape = tf.shape(scalarField)[0:-2]
-        indices = FieldTools.boundaryIndices(latShape, dir, +1)
+        indices = FieldTools.boundaryIndices(latShape, cpt, +1)
         updates = -1.0*tf.gather_nd(gaugeFieldShifted, indices)
 
         scalarFieldShifted = tf.tensor_scatter_nd_update(scalarFieldShifted, indices, updates)

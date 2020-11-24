@@ -102,19 +102,20 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
     def shiftScalarField(self, scalarField, dir, sign):
         # Moving one site forwards is equivalent to shifting the whole field
         # backwards, hence the minus sign (active/passive transform)
-        shiftedField = tf.roll(scalarField, -sign, dir)
+        scalarFieldShifted = tf.roll(scalarField, -sign, dir)
 
         if dir != 0:
-            return shiftedField
+            return scalarFieldShifted
 
-        # Reflecting boundary conditions in the r direction: replace boundary
-        # values with the corresponding values from the unshifted field
-        boundaryMask = self.scalarBoundaryMask(sign)
-        shiftedField = shiftedField - shiftedField * boundaryMask
-        shiftedField = shiftedField + scalarField * boundaryMask
+        # Apply reflecting BC's by setting links at the boundary to
+        # corresponding values from unshifted field
+        indices = FieldTools.boundaryIndices(self.latShape, dir, sign)
+        updates = tf.gather_nd(scalarField, indices)
+        scalarFieldShifted = tf.tensor_scatter_nd_update(
+            scalarFieldShifted, indices, updates
+            )
 
-        return shiftedField
-
+        return scalarFieldShifted
     # Shifts gauge field using periodic (y,z) or reflecting (r) BC's.
     # dir indicates the direction (r,y,z) of the shift and sign (+-1) indicates
     # forward or backwards. As there is a physical boundary, shifting in one
@@ -122,24 +123,30 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
     def shiftGaugeField(self, gaugeField, dir, sign):
         # Moving one site forwards is equivalent to shifting the whole field
         # backwards, hence the minus sign (active/passive transform)
-        shiftedField = tf.roll(gaugeField, -sign, dir)
+        gaugeFieldShifted = tf.roll(gaugeField, -sign, dir)
 
         if dir != 0:
-            return shiftedField
+            return gaugeFieldShifted
 
-        # Reflecting boundary conditions in the r direction: replace boundary
-        # values with the corresponding values from the unshifted field
-        boundaryMask = self.gaugeBoundaryMask(sign)
-        shiftedField = shiftedField - shiftedField @ boundaryMask
-        shiftedField = shiftedField + gaugeField @ boundaryMask
+        # Apply reflecting BC's by setting links at the boundary to
+        # corresponding values from unshifted field
+        indices = FieldTools.boundaryIndices(self.latShape, dir, sign)
+        updates = tf.gather_nd(gaugeField, indices)
+        gaugeFieldShifted = tf.tensor_scatter_nd_update(
+            gaugeFieldShifted, indices, updates
+            )
 
         if sign == -1:
         # Set the r-links at the origin to the identity
-            rBoundaryMask = self.rGaugeBoundaryMask()
-            shiftedField = shiftedField - shiftedField @ rBoundaryMask
-            shiftedField = shiftedField + rBoundaryMask
+            rOriginIndices = tf.stack(
+                tf.meshgrid(0, tf.range(self.latShape[1]), tf.range(self.latShape[2]), 0, indexing="ij"), -1
+                )
+            rOriginUpdates = tf.eye(2, batch_shape=tf.shape(rOriginIndices)[0:-1], dtype=tf.complex128)
+            gaugeFieldShifted = tf.tensor_scatter_nd_update(
+                gaugeFieldShifted, rOriginIndices, rOriginUpdates
+                )
 
-        return shiftedField
+        return gaugeFieldShifted
 
     # Shifts plaquette using periodic (y,z) or reflecting (r) BC's.
     # dir indicates the direction (r,y,z) of the shift and sign (+-1) indicates
@@ -147,114 +154,53 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
     def shiftPlaquette(self, plaquette, plaqDir1, plaqDir2, shiftDir, sign):
         # Moving one site forwards is equivalent to shifting the whole field
         # backwards, hence the minus sign (active/passive transform)
-        shiftedField = tf.roll(plaquette, -sign, shiftDir)
+        plaquetteShifted = tf.roll(plaquette, -sign, shiftDir)
 
         if shiftDir != 0:
-            return shiftedField
+            return plaquetteShifted
 
-        # Reflecting boundary conditions in the r direction: replace boundary
-        # values with the corresponding values from the unshifted field
-        boundaryMask = self.plaquetteBoundaryMask(sign)
-        shiftedField = shiftedField - shiftedField @ boundaryMask
-        shiftedField = shiftedField + plaquette @ boundaryMask
+        indices = FieldTools.boundaryIndices(self.latShape, shiftDir, sign)
 
         if sign == -1 and (plaqDir1 == 0 or plaqDir2 == 0):
         # Set the plaquettes straddling the origin to the identity
-            rBoundaryMask = self.plaquetteBoundaryMask(sign)
-            shiftedField = shiftedField - shiftedField @ rBoundaryMask
-            shiftedField = shiftedField + rBoundaryMask
+            updates = tf.eye(2, batch_shape=tf.shape(indices)[0:-1], dtype=tf.complex128)
+            plaquetteShifted = tf.tensor_scatter_nd_update(
+                plaquetteShifted, indices, updates
+                )
+        else:
+        # Apply reflecting BC's by setting links at the boundary to
+        # corresponding values from unshifted field
+            updates = tf.gather_nd(plaquette, indices)
+            plaquetteShifted = tf.tensor_scatter_nd_update(
+                plaquetteShifted, indices, updates
+                )
 
-        return shiftedField
+        return plaquetteShifted
 
     # Shifts covariant derivative using periodic (y,z) or reflecting (r) BC's.
     # dir indicates the direction (r,y,z) of the shift and sign (+-1) indicates
     # forward or backwards 
+    #
+    # Assumes derivative direction is the same as dir
     def shiftCovDeriv(self, covDeriv, dir, sign):
-        shiftedField = tf.roll(covDeriv, -sign, dir)
+        covDerivShifted = tf.roll(covDeriv, -sign, dir)
 
         if dir != 0:
-            return shiftedField
+            return covDerivShifted
 
-        boundaryMask = self.scalarBoundaryMask(sign)
-        shiftedField = shiftedField - shiftedField * boundaryMask
-        if sign == +1:
-            shiftedField = shiftedField + covDeriv * boundaryMask
+        indices = FieldTools.boundaryIndices(self.latShape, dir, sign)
 
-        return shiftedField
-
-    def scalarBoundaryMask(self, sign):
-        zeroBatchShape = self.latShape
-        zeroBatchShape = tf.tensor_scatter_nd_update(zeroBatchShape, [[0]], [zeroBatchShape[0] - 1])
-        zeroBatchShape = tf.concat([zeroBatchShape, [1,1]], 0)
-        
-        onesBatchShape = self.latShape
-        onesBatchShape = tf.tensor_scatter_nd_update(onesBatchShape, [[0]], [1])
-        onesBatchShape = tf.concat([onesBatchShape, [1,1]], 0)
-
-        zeros = tf.zeros(zeroBatchShape, dtype=tf.complex128)
-        ones = tf.ones(onesBatchShape, dtype=tf.complex128)
-
-        if (sign == +1):
-            boundaryMask = tf.concat([zeros, ones], 0)
+        if sign == -1:
+            updates = tf.zeros(tf.concat([tf.shape(indices)[0:-1], [2,2]], 0), dtype=tf.complex128)
         else:
-            boundaryMask = tf.concat([ones, zeros], 0)
+            updates = tf.gather_nd(covDeriv, indices)
 
-        return boundaryMask
+        covDerivShifted = tf.tensor_scatter_nd_update(
+            covDerivShifted, indices, updates
+            )
 
-    def gaugeBoundaryMask(self, sign):
-        zeroBatchShape = self.latShape
-        zeroBatchShape = tf.tensor_scatter_nd_update(zeroBatchShape, [[0]], [zeroBatchShape[0] - 1])
-        zeroBatchShape = tf.concat([zeroBatchShape, [3,2,2]], 0)
-        
-        eyeBatchShape = self.latShape
-        eyeBatchShape = tf.tensor_scatter_nd_update(eyeBatchShape, [[0]], [1])
-        eyeBatchShape = tf.concat([eyeBatchShape, [3]], 0)
+        return covDerivShifted
 
-        zeros = tf.zeros(zeroBatchShape, dtype=tf.complex128)
-        identities = tf.eye(2, batch_shape=eyeBatchShape, dtype=tf.complex128)
-
-        if (sign == +1):
-            boundaryMask = tf.concat([zeros, identities], 0)
-        else:
-            boundaryMask = tf.concat([identities, zeros], 0)
-
-        return boundaryMask
-
-    def rGaugeBoundaryMask(self):
-        yzZeros = tf.zeros(tf.concat([self.latShape, [2, 2]], 0), dtype=tf.complex128)
-        zeroBatchShape = self.latShape
-        zeroBatchShape = tf.tensor_scatter_nd_update(zeroBatchShape, [[0]], [zeroBatchShape[0] - 1])
-        zeroBatchShape = tf.concat([zeroBatchShape, [2,2]], 0)
-        
-        eyeBatchShape = self.latShape
-        eyeBatchShape = tf.tensor_scatter_nd_update(eyeBatchShape, [[0]], [1])
-
-        rZeros = tf.zeros(zeroBatchShape, dtype=tf.complex128)
-        rIdentites = tf.eye(2, batch_shape=eyeBatchShape, dtype=tf.complex128)
-
-        rMask = tf.concat([rIdentites, rZeros], 0)
-
-        boundaryMask = tf.stack([rMask, yzZeros, yzZeros], -3)
-
-        return boundaryMask
-
-    def plaquetteBoundaryMask(self, sign):
-        zeroBatchShape = self.latShape
-        zeroBatchShape = tf.tensor_scatter_nd_update(zeroBatchShape, [[0]], [zeroBatchShape[0] - 1])
-        zeroBatchShape = tf.concat([zeroBatchShape, [2,2]], 0)
-        
-        eyeBatchShape = self.latShape
-        eyeBatchShape = tf.tensor_scatter_nd_update(eyeBatchShape, [[0]], [1])
-
-        zeros = tf.zeros(zeroBatchShape, dtype=tf.complex128)
-        identities = tf.eye(2, batch_shape=eyeBatchShape, dtype=tf.complex128)
-
-        if (sign == +1):
-            boundaryMask = tf.concat([zeros, identities], 0)
-        else:
-            boundaryMask = tf.concat([identities, zeros], 0)
-
-        return boundaryMask
 
     # Process gradients so the respect the field constraints. Includes division by
     # 2*pi*R to make gradients comparable to those in 3d cartesian theories

@@ -44,7 +44,7 @@ X,Y,Z = tf.meshgrid(x,y,z, indexing="ij")
 params = {
     "vev" : args.vev,
     "selfCoupling" : args.selfCoupling,
-    "gaugeCoupling" : args.gaugeCoupling,
+    "gaugeCoupling" : args.gaugeCoupling
 }
 
 
@@ -79,7 +79,7 @@ opt = tf.keras.optimizers.SGD(
     )
 numSteps = 0
 rssGrad = 1e6 # Initial value; a big number
-maxNumSteps = 100
+maxNumSteps = 10000
 printIncrement = 10
 
 while rssGrad > tol and numSteps < maxNumSteps:

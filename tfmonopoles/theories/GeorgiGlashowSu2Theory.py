@@ -182,9 +182,12 @@ class GeorgiGlashowSu2Theory:
         indices = FieldTools.boundaryIndices(latShape, dir, sign)
 
         updates = tf.gather_nd(scalarFieldShifted, indices)
-        updates = -1.0*FieldTools.pauliMatrix(pauliMatNum) @ updates @ FieldTools.pauliMatrix(pauliMatNum)
+        updates = -1.0*FieldTools.pauliMatrix(pauliMatNum) @\
+            updates @ FieldTools.pauliMatrix(pauliMatNum)
 
-        scalarFieldShifted = tf.tensor_scatter_nd_update(scalarFieldShifted, indices, updates)
+        scalarFieldShifted = tf.tensor_scatter_nd_update(
+            scalarFieldShifted, indices, updates
+            )
         return scalarFieldShifted
 
     # Shifts gauge field using supplied BC's
@@ -200,9 +203,12 @@ class GeorgiGlashowSu2Theory:
         indices = FieldTools.boundaryIndices(latShape, dir, sign)
 
         updates = tf.gather_nd(gaugeFieldShifted, indices)
-        updates = FieldTools.pauliMatrix(pauliMatNum) @ updates @ FieldTools.pauliMatrix(pauliMatNum)
+        updates = FieldTools.pauliMatrix(pauliMatNum) @\
+            updates @ FieldTools.pauliMatrix(pauliMatNum)
 
-        gaugeFieldShifted = tf.tensor_scatter_nd_update(gaugeFieldShifted, indices, updates)
+        gaugeFieldShifted = tf.tensor_scatter_nd_update(
+            gaugeFieldShifted, indices, updates
+            )
         return gaugeFieldShifted
 
 
@@ -217,26 +223,14 @@ class GeorgiGlashowSu2Theory:
 
         return plaquette
 
-    # Mask of -1 values along a tHooft line with ones elsewhere to flip plaquettes
-    def tHooftLineMask(self, plaquette):
-        latShape = tf.shape(plaquette)[0:3]
-
-        mask = -tf.ones([latShape[0], 1, 1, 1, 1], dtype=tf.complex128)
-
-        yPaddings = [latShape[1] // 2, latShape[1] - latShape[1] // 2 - 1]
-        zPaddings = [latShape[2] // 2, latShape[2] - latShape[2] // 2 - 1]
-
-        paddings = [[0,0], yPaddings, zPaddings, [0,0], [0,0]]
-
-        mask = tf.pad(mask, paddings, constant_values=1)
-
-        return mask
-
     # Indices of the 't Hooft line
     def tHooftLineIndices(self, latShape):
-        indices = tf.stack(tf.meshgrid(
-            tf.range(latShape[0]), latShape[1] //2, latShape[1] // 2, indexing="ij"
-            ), -1)
+        indices = tf.stack(
+                tf.meshgrid(
+                tf.range(latShape[0]), latShape[1] //2, latShape[1] // 2,
+                indexing="ij"
+                    ), -1
+                )
 
         return indices
 

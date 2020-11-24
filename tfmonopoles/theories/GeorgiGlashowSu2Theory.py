@@ -183,37 +183,40 @@ class GeorgiGlashowSu2Theory:
 
     # Shifts scalar field using supplied BC's
     def shiftScalarField(self, scalarField, dir, sign):
-        shiftedField = tf.roll(scalarField, -sign, dir)
+        scalarFieldShifted = tf.roll(scalarField, -sign, dir)
 
         pauliMatNum = self.boundaryConditions[dir]
 
         if pauliMatNum == 0:
-            return shiftedField
+            return scalarFieldShifted
 
-        # Apply boundary conditions
-        latShape = tf.shape(scalarField)[0:-2]
-        boundaryMask = self.scalarBoundaryMask(latShape, dir, sign)
+        latShape = tf.shape(scalarField)[0:3]
+        indices = FieldTools.boundaryIndices(latShape, dir, sign)
 
-        shiftedField = boundaryMask @ shiftedField @ boundaryMask
+        updates = tf.gather_nd(scalarFieldShifted, indices)
+        updates = -1.0*FieldTools.pauliMatrix(pauliMatNum) @ updates @ FieldTools.pauliMatrix(pauliMatNum)
 
-        return shiftedField
+        scalarFieldShifted = tf.tensor_scatter_nd_update(scalarFieldShifted, indices, updates)
+        return scalarFieldShifted
 
     # Shifts gauge field using supplied BC's
     def shiftGaugeField(self, gaugeField, dir, sign):
-        shiftedField = tf.roll(gaugeField, -sign, dir)
+        gaugeFieldShifted = tf.roll(gaugeField, -sign, dir)
 
         pauliMatNum = self.boundaryConditions[dir]
 
         if pauliMatNum == 0:
-            return shiftedField
+            return gaugeFieldShifted
 
-        # Apply boundary conditions
-        latShape = tf.shape(gaugeField)[0:-2]
-        boundaryMask = self.gaugeBoundaryMask(latShape, dir, sign)
+        latShape = tf.shape(gaugeField)[0:3]
+        indices = FieldTools.boundaryIndices(latShape, dir, sign)
 
-        shiftedField = boundaryMask @ shiftedField @ boundaryMask
+        updates = tf.gather_nd(gaugeFieldShifted, indices)
+        updates = FieldTools.pauliMatrix(pauliMatNum) @ updates @ FieldTools.pauliMatrix(pauliMatNum)
 
-        return shiftedField
+        gaugeFieldShifted = tf.tensor_scatter_nd_update(gaugeFieldShifted, indices, updates)
+        return gaugeFieldShifted
+
 
     def flipPlaquette(self, plaquette):
         # Mask to flip plaquettes along a line in the x direction, giving a

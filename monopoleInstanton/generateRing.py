@@ -82,11 +82,11 @@ tol = args.tol
 opt = tf.keras.optimizers.SGD(
     learning_rate=0.01*args.gaugeCoupling*args.vev, momentum=0.5)
 numSteps = 0
-rmsGrad = 1e6 # Initial value; a big number
+rssGrad = 1e6 # Initial value; a big number
 maxNumSteps = 10000
 printIncrement = 10
 
-while rmsGrad > tol and numSteps < maxNumSteps:
+while rssGrad > tol and numSteps < maxNumSteps:
     # Compute the field energy, with tf watching the variables
     with tf.GradientTape() as tape:
         energy = lossFn()
@@ -104,13 +104,13 @@ while rmsGrad > tol and numSteps < maxNumSteps:
     gradSq = FieldTools.innerProduct(grads[0], grads[0], tr=True)
     gradSq += FieldTools.innerProduct(grads[1], grads[1], tr=True, adj=True)
 
-    rmsGrad = tf.sqrt(gradSq)
+    rssGrad = tf.sqrt(gradSq)
 
     if (numSteps % printIncrement == 0):
         print("Energy after " + str(numSteps) + " iterations:       " +\
             str(energy.numpy()))
         print("RSS gradient after " + str(numSteps) + " iterations: " +\
-            str(rmsGrad.numpy()))
+            str(rssGrad.numpy()))
 
     # Perform the gradient descent step
     opt.apply_gradients(zip(grads, vars))

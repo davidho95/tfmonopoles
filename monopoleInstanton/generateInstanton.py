@@ -111,6 +111,17 @@ while numSteps < minSteps or (rssGrad < rssGradOld and numSteps < maxSteps and r
 print("First gradient descent completed in " + str(numSteps) + " iterations")
 print("Energy reached: " + str(energy.numpy()))
 
+# Intermediate save
+outputPath = args.outputPath
+if outputPath != "":
+    np.save(outputPath + "/R", R.numpy())
+    np.save(outputPath + "/Y", Y.numpy())
+    np.save(outputPath + "/Z", Z.numpy())
+    np.save(outputPath + "/scalarField", scalarFieldVar.numpy())
+    np.save(outputPath + "/gaugeField", gaugeFieldVar.numpy())
+    np.save(outputPath + "/params", params)
+
+
 # Now minimise the RSS gradient summed over all sites
 opt = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=args.momentum)
 numSteps = 0
@@ -171,7 +182,6 @@ print("Gradient descent finished in " + str(numSteps) + " iterations")
 print("Final energy: " + str(energy.numpy()))
 
 # Save fields as .npy files for plotting and further analysis
-outputPath = args.outputPath
 if outputPath != "":
     np.save(outputPath + "/R", R.numpy())
     np.save(outputPath + "/Y", Y.numpy())

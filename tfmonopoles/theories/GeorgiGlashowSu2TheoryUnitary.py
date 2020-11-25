@@ -51,7 +51,7 @@ class GeorgiGlashowSu2TheoryUnitary(GeorgiGlashowSu2Theory):
 
         latShape = tf.shape(scalarField)[0:-2]
         indices = FieldTools.boundaryIndices(latShape, cpt, +1)
-        updates = -1.0*tf.gather_nd(gaugeFieldShifted, indices)
+        updates = -1.0*tf.gather_nd(scalarFieldShifted, indices)
 
         scalarFieldShifted = tf.tensor_scatter_nd_update(scalarFieldShifted, indices, updates)
 

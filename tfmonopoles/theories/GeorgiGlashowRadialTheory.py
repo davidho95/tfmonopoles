@@ -12,7 +12,7 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
     # Params is a dictionary with keys "vev", "selfCoupling" and "gaugeCoupling"
     def __init__(self, params):
         super().__init__(params)
-        self.latShape = tf.constant(params["latShape"])
+        self.latShape = params["latShape"]
 
         r = tf.linspace(tf.cast(0.5, tf.float64), tf.cast(self.latShape[0], tf.float64) - 0.5, self.latShape[0])
         y = tf.linspace(-tf.cast(self.latShape[1] - 1, tf.float64) / 2, tf.cast(self.latShape[1] - 1, tf.float64) / 2, self.latShape[1]) 
@@ -98,7 +98,7 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
     # Shifts scalar field using periodic (y,z) or reflecting (r) BC's.
     # dir indicates the direction (r,y,z) of the shift and sign (+-1) indicates
     # forward or backwards. As there is a physical boundary, shifting in one
-    # direction then another is not an identity operation.
+    # direction then back is not an identity operation.
     def shiftScalarField(self, scalarField, cpt, sign):
         # Moving one site forwards is equivalent to shifting the whole field
         # backwards, hence the minus sign (active/passive transform)
@@ -109,17 +109,24 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
 
         # Apply reflecting BC's by setting links at the boundary to
         # corresponding values from unshifted field
-        indices = FieldTools.boundaryIndices(self.latShape, cpt, sign)
-        updates = tf.gather_nd(scalarField, indices)
+        if sign == +1:
+            slicePos = self.latShape[cpt] - 2
+        else:
+            slicePos = 1
+        # For gathering from the shifted field (gathering from the variable is slow)
+        indices = FieldTools.sliceIndices(self.latShape, cpt, slicePos)
+        # For scattering onto the boundary
+        boundaryIndices = FieldTools.boundaryIndices(self.latShape, cpt, sign)
+        updates = tf.gather_nd(scalarFieldShifted, indices)
         scalarFieldShifted = tf.tensor_scatter_nd_update(
-            scalarFieldShifted, indices, updates
+            scalarFieldShifted, boundaryIndices, updates
             )
 
         return scalarFieldShifted
     # Shifts gauge field using periodic (y,z) or reflecting (r) BC's.
     # cpt indicates the direction (r,y,z) of the shift and sign (+-1) indicates
     # forward or backwards. As there is a physical boundary, shifting in one
-    # direction then another is not an identity operation.
+    # direction then back is not an identity operation.
     def shiftGaugeField(self, gaugeField, cpt, sign):
         # Moving one site forwards is equivalent to shifting the whole field
         # backwards, hence the minus sign (active/passive transform)
@@ -130,10 +137,19 @@ class GeorgiGlashowRadialTheory(GeorgiGlashowSu2TheoryUnitary):
 
         # Apply reflecting BC's by setting links at the boundary to
         # corresponding values from unshifted field
-        indices = FieldTools.boundaryIndices(self.latShape, cpt, sign)
-        updates = tf.gather_nd(gaugeField, indices)
+        if sign == +1:
+            slicePos = self.latShape[cpt] - 2
+        else:
+            slicePos = 1
+        # For gathering from the shifted field (gathering from the variable is slow)
+        indices = FieldTools.sliceIndices(self.latShape, cpt, slicePos)
+        # For scattering onto the boundary
+        boundaryIndices = FieldTools.boundaryIndices(self.latShape, cpt, sign)
+        updates = tf.gather_nd(gaugeFieldShifted, indices)
+        boundaryUpdates = tf.gather_nd(gaugeField, boundaryIndices)
+
         gaugeFieldShifted = tf.tensor_scatter_nd_update(
-            gaugeFieldShifted, indices, updates
+            gaugeFieldShifted, boundaryIndices, updates
             )
 
         if sign == -1:

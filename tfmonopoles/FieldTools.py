@@ -263,8 +263,8 @@ def constantMagneticField(X, Y, Z, fieldDir, numFluxQuanta):
             ) * coords[cpt1]
 
     # Mask for sites on the cpt1 boundary
-    cpt1FaceShape = list(latShape)
-    cpt1FaceShape[cpt1] = 1
+    cpt1FaceShape = tf.tensor_scatter_nd_update(latShape, [[cpt1]], [1])
+    # cpt1FaceShape[cpt1] = 1
     cpt1Mask = tf.ones(cpt1FaceShape, dtype=tf.float64)
 
     paddings = [[0,0], [0,0], [0,0]]
@@ -286,11 +286,16 @@ def constantMagneticField(X, Y, Z, fieldDir, numFluxQuanta):
 
 # Gets the indices of the sites on the boundary
 def boundaryIndices(latShape, cpt, sign):
-    indexVectors = [tf.range(latShape[0]), tf.range(latShape[1]), tf.range(latShape[2])]
     if sign == +1:
-        indexVectors[cpt] = latShape[cpt] - 1
+        return sliceIndices(latShape, cpt, latShape[cpt] - 1)
     else:
-        indexVectors[cpt] = 0
+        return sliceIndices(latShape, cpt, 0)
+
+    return indices
+
+def sliceIndices(latShape, cpt, slicePosition):
+    indexVectors = [tf.range(latShape[0]), tf.range(latShape[1]), tf.range(latShape[2])]
+    indexVectors[cpt] = slicePosition
     indices = tf.stack(tf.meshgrid(indexVectors[0], indexVectors[1], indexVectors[2], indexing="ij"), -1)
 
     return indices

@@ -1,6 +1,13 @@
 # tfmonopoles
 Proof-of-concept for computing monopole and sphaleron field configurations using TensorFlow
 
+## Setup
+Currently (this is subject to change in the future) the example scripts `generateSingleMonpole.py` and `generateSphaleron.py` can be run from the base directory after cloning the repository.
+
+To use `tfmonopoles` theories and functions in other contexts, the package must be installed. The easiest way to do this is to run `pip install .` from the project base directory. To edit the package (e.g. add new theories) while using it, use
+
+```pip install -e .```
+
 ## Generate a Magnetic Monopole
 The script ```generateSingleMonopole.py``` runs a gradient descent optimisation, minimising the energy of lattice Georgi-Glashow SU(2) Theory with twisted boundary conditions. The minimum-energy field configuration for these boundary conditions is a magnetic monopole of charge +-1. The script can be run as follows:
 

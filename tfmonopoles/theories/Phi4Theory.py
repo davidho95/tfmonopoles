@@ -28,7 +28,7 @@ class Phi4Theory:
         numDims = 3
         for ii in range(numDims):
             deriv = self.forwardDiff(scalarField, ii)
-            energyDensity += tf.math.real(deriv * tf.math.conj(deriv))
+            energyDensity += 0.5*tf.math.real(deriv * tf.math.conj(deriv))
         return energyDensity
 
     # Scalar potential

@@ -62,7 +62,7 @@ New can be added by creating a new class using another theory as a template, or 
 The package also contains a set of functions for common operations on (mainly) SU(2) gauge theories. As the functionality of the package grows, this may be split into submodules.
 
 ## Monopole Instantons
-The subdirectory `monopoleInstanton` contains the code used to generate monopole instanton solutions in lattice field theory (the field theory analogue of the calculation in [this paper](https://www.sciencedirect.com/science/article/abs/pii/0550321382905119) (unfortunately behind a paywall). The manuscript on this calculation is in production and will appear on arXiv soon. For more information [contact the author](mailto:d.ho17@imperial.ac.uk).
+The subdirectory `monopoleInstanton` contains the code used to generate monopole instanton solutions in lattice field theory (the field theory analogue of the calculation in [this paper](https://www.sciencedirect.com/science/article/abs/pii/0550321382905119), which is unfortunately behind a paywall). The manuscript on this calculation is in production and will appear on arXiv soon. For more information [contact the author](mailto:d.ho17@imperial.ac.uk).
 
 ## Notes
 Currently these calculations cannot use GPU optimisation, as tensorflow does have support for complex numbers on GPUs (see relevant issue [here](https://github.com/tensorflow/tensorflow/issues/44834)). A quick way to ensure the program is run on CPU if GPUs are available in a Linux environment is to set the environment variable `CUDA_VISIBLE_DEVICES` using

@@ -45,7 +45,7 @@ python -u generateSphaleron.py --size 16 --vev 1 --gaugeCoupling 1 --selfCouplin
 
 The parameters in this example are (roughly) the correct boson mass ratios for the physical Standard Model.
 
-Saddle point finding is much more difficult than minimising, and accordingly this script takes longer to run, but with the given theory parameters it takes around 15 minutes on four intel i5-4460 cores for a 16 x 16 x 16 lattice.
+Saddle point finding is much more difficult than minimising, and accordingly this script takes longer to run, but with the given theory parameters it takes around 10 minutes on four intel i5-4460 cores for a 16 x 16 x 16 lattice.
 
 The optimised Higgs, isospin and hypercharge fields are printed to npy files for analysis.
 

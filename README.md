@@ -65,8 +65,9 @@ The package also contains a set of functions for common operations on (mainly) S
 The subdirectory `monopoleInstanton` contains the code used to generate monopole instanton solutions in lattice field theory, detailed in [this preprint](https://arxiv.org/abs/2103.12799) For more information [contact the author](mailto:d.ho17@imperial.ac.uk).
 
 ## Attribution
-If you use this code in research, please cite the following paper:
+If you use this code in research, please cite the following paper, where the code was first used:
 
+```
 @article{Ho2021instanton,
     author = "Ho, David L.-J. and Rajantie, Arttu",
     title = "{Instanton solution for Schwinger production of 't Hooft-Polyakov monopoles}",
@@ -77,6 +78,7 @@ If you use this code in research, please cite the following paper:
     month = "3",
     year = "2021"
 }
+```
 
 ## Notes
 Currently these calculations cannot use GPU optimisation, as tensorflow does have support for complex numbers on GPUs (see relevant issue [here](https://github.com/tensorflow/tensorflow/issues/44834)). A quick way to ensure the program is run on CPU if GPUs are available in a Linux environment is to set the environment variable `CUDA_VISIBLE_DEVICES` using

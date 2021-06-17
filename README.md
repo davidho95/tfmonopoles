@@ -1,6 +1,8 @@
 # tfmonopoles
 A Python package for computing monopole and sphaleron field configurations using TensorFlow
 
+[![DOI](https://zenodo.org/badge/311992025.svg)](https://zenodo.org/badge/latestdoi/311992025)
+
 ## Setup
 Currently (this is subject to change in the future) the example scripts `generatePhi4Vacuum.py`, `generateSingleMonpole.py` and `generateSphaleron.py` can be run from the base directory after cloning the repository.
 

@@ -82,6 +82,22 @@ If you use this code in research, please cite the following paper, where the cod
 }
 ```
 
+The source code may also be cited directly via its Zenodo DOI:
+
+```
+@software{tfmonopoles,
+  author       = {Ho, David L.-J.},
+  title        = {davidho95/tfmonopoles: First release},
+  month        = jun,
+  year         = 2021,
+  publisher    = {Zenodo},
+  version      = {v1.0.0},
+  doi          = {10.5281/zenodo.4972441},
+  url          = {https://doi.org/10.5281/zenodo.4972441}
+}
+```
+
+
 ## Notes
 Currently these calculations cannot use GPU optimisation, as tensorflow does have support for complex numbers on GPUs (see relevant issue [here](https://github.com/tensorflow/tensorflow/issues/44834)). A quick way to ensure the program is run on CPU if GPUs are available in a Linux environment is to set the environment variable `CUDA_VISIBLE_DEVICES` using
 ```
